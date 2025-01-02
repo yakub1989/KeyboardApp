@@ -1,0 +1,9 @@
+<Window x:Class="KeyboardApp.EditKeyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Edit Key" Height="150" Width="300"
+        KeyDown="OnKeyDown">
+	<Grid>
+		<TextBlock Text="Wprowadź dowolny przycisk..." VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="16"/>
+	</Grid>
+</Window>
