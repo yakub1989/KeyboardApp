@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -19,7 +20,10 @@ namespace KeyboardApp
         public MainWindow()
         {
             InitializeComponent();
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.Close();
         }
+
         private void OnKeyClick(object sender, RoutedEventArgs e)
         {
             // Cast sender to Button
@@ -32,6 +36,39 @@ namespace KeyboardApp
                     button.Content = editWindow.PressedKey;
                 }
             }
+        }
+
+        private bool CheckForDuplicates()
+        {
+            // Fetch keyboard layout content
+            var buttonContents = GetSpecificButtonContents();
+
+            // Flatten the rows into a single list
+            var allKeys = new List<string>();
+            foreach (var row in buttonContents)
+            {
+                allKeys.AddRange(row);
+            }
+
+            // Track duplicates
+            var seen = new HashSet<string>();
+            bool isDuplicate = false;
+
+            foreach (var key in allKeys)
+            {
+                if (seen.Contains(key))
+                {
+                    isDuplicate = true;
+                    MessageBox.Show($"Duplicate key found: {key}", "Duplicate Key Detected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return isDuplicate;
+                }
+                else
+                {
+                    seen.Add(key);
+                }
+            }
+
+            return isDuplicate;
         }
         private void ResetLayout(object sender, RoutedEventArgs e)
         {
@@ -63,8 +100,8 @@ namespace KeyboardApp
             int[][] ranges = new int[][]
             {
                 new int[] { 28, 37 }, // btn_28 to btn_37
-                new int[] { 42, 52 }, // btn_42 to btn_52
-                new int[] { 55, 61 }  // btn_55 to btn_61
+                new int[] { 42, 51 }, // btn_42 to btn_52
+                new int[] { 55, 64 }  // btn_55 to btn_61
             };
 
             // List to store rows of content
@@ -95,17 +132,59 @@ namespace KeyboardApp
         }
         private void EvaluateLayout(object sender, RoutedEventArgs e)
         {
+            var isDuplicate = CheckForDuplicates();
+            if (isDuplicate) return;
+
             var buttonContents = GetSpecificButtonContents();
 
-            // Aggregate data into a string
             StringBuilder aggregatedData = new StringBuilder();
             for (int i = 0; i < buttonContents.Length; i++)
             {
-                aggregatedData.AppendLine($"Row {i + 1}: {string.Join(", ", buttonContents[i])}");
+                aggregatedData.AppendLine($"Row {i + 1}: {string.Join(" ", buttonContents[i])}");
             }
 
-            // Display the aggregated data in a MessageBox
-            MessageBox.Show(aggregatedData.ToString(), "Keyboard Layout Evaluation", MessageBoxButton.OK, MessageBoxImage.Information);
+            string corpusFilePath = SettingsWindow.SelectedCorpusFilePath;
+            if (!File.Exists(corpusFilePath))
+            {
+                MessageBox.Show("Corpus file not found. Please select a valid corpus in settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            string corpusContent = File.ReadAllText(corpusFilePath);
+            var frequencyData = EvaluationAlgorithm.AnalyzeCorpusFrequency(corpusContent);
+            var bigramData = EvaluationAlgorithm.AnalyzeCorpusBigrams(corpusContent);
+
+            StringBuilder debugBigramInfo = new StringBuilder();
+            double totalEffort = EvaluationAlgorithm.EvaluateKeyboardEffort(buttonContents, frequencyData, bigramData, debugBigramInfo);
+
+            aggregatedData.AppendLine();
+            aggregatedData.AppendLine($"Total Effort (including bigram penalties if enabled): {totalEffort:F2}");
+
+            // Save debug information to a .log file
+            string logFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KeyboardEvaluation.log");
+            using (StreamWriter writer = new StreamWriter(logFilePath, false))
+            {
+                writer.WriteLine("Keyboard Layout Evaluation Log");
+                writer.WriteLine("==============================");
+                writer.WriteLine(aggregatedData.ToString());
+                writer.WriteLine();
+                writer.WriteLine(debugBigramInfo.ToString());
+            }
+
+            MessageBox.Show($"Evaluation results saved to log file:\n{logFilePath}", "Evaluation Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+
+
+
+        private void OpenSettings(object sender, RoutedEventArgs e)
+        {
+            var settingsWindow = new SettingsWindow();
+            if (settingsWindow.ShowDialog() == true)
+            {
+                // Opcjonalnie: możesz obsłużyć zapisane ustawienia, jeśli jest taka potrzeba
+                MessageBox.Show("Settings updated successfully.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
     }
 }
