@@ -9,7 +9,7 @@ namespace KeyboardApp
     public class GenerationAlgorithms
     {
         private static readonly char[] AvailableCharacters = "QWERTYUIOPASDFGHJKL;ZXCVBNM,./".ToCharArray();
-        public static List<string[][]> KeyboardPopulation { get; private set; } = new List<string[][]>();
+        public static List<string[][]> KeyboardPopulation { get; set; } = new List<string[][]>();
 
         public static List<string[][]> GenerateInitialPopulation(int populationSize)
         {

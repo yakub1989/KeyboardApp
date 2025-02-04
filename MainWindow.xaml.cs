@@ -212,7 +212,8 @@ namespace KeyboardApp
                     MessageBox.Show("Invalid selection method. Please check settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
             }
-
+            List<string[][]> offspring = CrossoverAlgorithms.ReverseSequenceCrossover(selectedParents);
+            GenerationAlgorithms.KeyboardPopulation = offspring;
             MessageBox.Show("Layouts generated and saved to KeyboardGeneration.log", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
