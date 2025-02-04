@@ -85,8 +85,9 @@ namespace KeyboardApp
         public static double EvaluateKeyboardEffort(string[][] keyboardLayout, Dictionary<char, int> frequencyData, Dictionary<string, int> bigramData, StringBuilder debugBigramInfo)
         {
             double totalEffort = 0.0;
-            var bigramDiagnostics = new List<(string bigram, int frequency, double totalPenalty)>();
+            var bigramDiagnostics = new List<(string bigram, int frequency, double totalPenalty, double totalReward, double rowSwitchPenalty)>();
 
+            // Podstawowy wysiłek
             for (int row = 0; row < keyboardLayout.Length; row++)
             {
                 for (int column = 0; column < keyboardLayout[row].Length; column++)
@@ -100,38 +101,202 @@ namespace KeyboardApp
                 }
             }
 
-            if (SettingsWindow.IsDistanceMetricEnabled)
+            // Analiza bigramów z uwzględnieniem warunków boolowskich
+            foreach (var bigram in bigramData)
             {
-                foreach (var bigram in bigramData)
-                {
-                    string keyPair = bigram.Key;
-                    int bigramFrequency = bigram.Value;
+                string keyPair = bigram.Key;
+                int bigramFrequency = bigram.Value;
 
-                    char firstChar = keyPair[0];
-                    char secondChar = keyPair[1];
+                char firstChar = keyPair[0];
+                char secondChar = keyPair[1];
 
-                    double bigramPenalty = EvaluateBigramPenalty(keyboardLayout, firstChar, secondChar);
-                    double totalPenalty = bigramPenalty * bigramFrequency;
+                // Obliczanie kary za dystans
+                double bigramPenalty = SettingsWindow.IsDistanceMetricEnabled
+                    ? EvaluateBigramPenalty(keyboardLayout, firstChar, secondChar)
+                    : 0.0;
+                double totalPenalty = bigramPenalty * bigramFrequency;
 
-                    bigramDiagnostics.Add((keyPair, bigramFrequency, totalPenalty));
+                // Obliczanie nagrody za alternację
+                double alternationReward = SettingsWindow.SelectedOptimizationPattern == "Prefer Alternations"
+                    ? EvaluateBigramAlternationReward(keyboardLayout, firstChar, secondChar)
+                    : 0.0;
+                double totalReward = alternationReward * bigramFrequency;
 
-                    debugBigramInfo.AppendLine($"Bigram: '{firstChar}{secondChar}', Frequency: {bigramFrequency}, Penalty: {bigramPenalty:F2}, Total Contribution: {totalPenalty:F2}");
-                    totalEffort += totalPenalty;
-                }
+                // Obliczanie kary za przełączanie rzędów
+                double rowSwitchPenalty = SettingsWindow.IsRowSwitchMetricEnabled
+                    ? EvaluateRowSwitchPenalty(keyboardLayout, firstChar, secondChar) * bigramFrequency
+                    : 0.0;
 
-                var topBigramDiagnostics = bigramDiagnostics
-                    .OrderByDescending(b => b.totalPenalty)
-                    .Take(10);
+                // Dodanie wyników do diagnostyki bigramów
+                bigramDiagnostics.Add((keyPair, bigramFrequency, totalPenalty, totalReward, rowSwitchPenalty));
 
-                debugBigramInfo.AppendLine("\nTop 10 Bigrams by Penalty:");
-                foreach (var (bigram, frequency, totalPenalty) in topBigramDiagnostics)
-                {
-                    debugBigramInfo.AppendLine($"Bigram: '{bigram}', Frequency: {frequency}, Total Penalty: {totalPenalty:F2}");
-                }
+                // Uwzględnianie kar i nagród w całkowitym wysiłku
+                totalEffort += totalPenalty;
+                totalEffort += totalReward;
+                totalEffort += rowSwitchPenalty;
+            }
+
+            // 🔹 **NOWOŚĆ: Obliczenie kary za niezbalansowanie rąk**
+            if (SettingsWindow.IsHandBalanceMetricEnabled)
+            {
+                double handBalancePenalty = CalculateHandBalancePenalty(keyboardLayout, frequencyData);
+                totalEffort *= (1 + handBalancePenalty); // Uwzględnienie kary jako mnożnik
+                debugBigramInfo.AppendLine($"\nHand Balance Penalty Multiplier: {handBalancePenalty:F2}");
+            }
+
+            // Debug: Największe kary i nagrody
+            var topPenaltyDiagnostics = bigramDiagnostics
+                .OrderByDescending(b => b.totalPenalty)
+                .Take(10);
+
+            debugBigramInfo.AppendLine("\nTop 10 Bigrams by Penalty:");
+            foreach (var (bigram, frequency, totalPenalty, _, _) in topPenaltyDiagnostics)
+            {
+                debugBigramInfo.AppendLine($"Bigram: '{bigram}', Frequency: {frequency}, Total Penalty: {totalPenalty:F2}");
+            }
+
+            var topRewardDiagnostics = bigramDiagnostics
+                .OrderByDescending(b => b.totalReward)
+                .Take(10);
+
+            debugBigramInfo.AppendLine("\nTop 10 Bigrams by Reward:");
+            foreach (var (bigram, frequency, _, totalReward, _) in topRewardDiagnostics)
+            {
+                debugBigramInfo.AppendLine($"Bigram: '{bigram}', Frequency: {frequency}, Total Reward: {totalReward:F2}");
+            }
+
+            var topRowSwitchDiagnostics = bigramDiagnostics
+                .OrderByDescending(b => b.rowSwitchPenalty)
+                .Take(10);
+
+            debugBigramInfo.AppendLine("\nTop 10 Bigrams by Row Switch Penalty:");
+            foreach (var (bigram, frequency, _, _, rowSwitchPenalty) in topRowSwitchDiagnostics)
+            {
+                debugBigramInfo.AppendLine($"Bigram: '{bigram}', Frequency: {frequency}, Row Switch Penalty: {rowSwitchPenalty:F2}");
             }
 
             return totalEffort;
         }
+
+
+        public static double EvaluateRowSwitchPenalty(string[][] keyboardLayout, char firstChar, char secondChar)
+        {
+            // Przypisanie rzędów klawiszom (0: Top Row, 1: Home Row, 2: Bottom Row)
+            int[,] rowAssignments = new int[,]
+            {
+        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, // Top Row
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, // Home Row
+        { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }  // Bottom Row
+            };
+
+            // Znajdź pozycje znaków w układzie klawiatury
+            (int row, int col)? pos1 = FindKeyPosition(keyboardLayout, firstChar);
+            (int row, int col)? pos2 = FindKeyPosition(keyboardLayout, secondChar);
+
+            // Jeśli któryś znak nie zostanie znaleziony, brak kary
+            if (pos1 == null || pos2 == null)
+            {
+                return 0.0;
+            }
+
+            // Wyciągnij pozycje
+            var position1 = pos1.Value;
+            var position2 = pos2.Value;
+
+            // Pobierz rzędy dla obu znaków
+            int row1 = rowAssignments[position1.row, position1.col];
+            int row2 = rowAssignments[position2.row, position2.col];
+
+            // Oblicz różnicę rzędów
+            int rowDifference = Math.Abs(row1 - row2);
+
+            // Przydziel karę na podstawie różnicy rzędów
+            switch (rowDifference)
+            {
+                case 1: // Przełączenie Home <-> Top lub Home <-> Bottom
+                    return 1/20;
+                case 2: // Przełączenie Top <-> Bottom
+                    return 1.5/20;
+                default: // Brak przełączenia rzędów
+                    return 0.0;
+            }
+        }
+
+        public static double EvaluateBigramAlternationReward(string[][] keyboardLayout, char firstChar, char secondChar)
+        {
+            // Define hand zones for the keyboard
+            int[,] handZones = new int[,]
+            {
+        { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, // Top row
+        { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, // Home row
+        { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }  // Bottom row
+            };
+
+            // Find positions of both characters in the keyboard layout
+            (int row, int col)? pos1 = FindKeyPosition(keyboardLayout, firstChar);
+            (int row, int col)? pos2 = FindKeyPosition(keyboardLayout, secondChar);
+
+            // If either character is not found, no reward
+            if (pos1 == null || pos2 == null)
+            {
+                return 0.0;
+            }
+
+            // Extract positions
+            var position1 = pos1.Value;
+            var position2 = pos2.Value;
+
+            // Check if the bigram alternates between hands
+            int hand1 = handZones[position1.row, position1.col];
+            int hand2 = handZones[position2.row, position2.col];
+
+            if (hand1 != hand2) // Alternation detected
+            {
+                // Calculate base reward as the average effort for the two keys
+                double effort1 = GetEffortValue(position1.row, position1.col);
+                double effort2 = GetEffortValue(position2.row, position2.col);
+                double baseReward = (effort1 + effort2) / 2.0;
+
+                // Divide the reward by 25 to reduce its impact
+                return -(baseReward / 25.0); // Negative reward decreases effort
+            }
+
+            // No alternation, no reward
+            return 0.0;
+        }
+
+        public static double EvaluateBigramRollsReward(string[][] keyboardLayout, char firstChar, char secondChar)
+        {
+            // Find the positions of both characters in the keyboard layout
+            (int row, int col)? pos1 = FindKeyPosition(keyboardLayout, firstChar);
+            (int row, int col)? pos2 = FindKeyPosition(keyboardLayout, secondChar);
+
+            // If either character is not found, no reward
+            if (pos1 == null || pos2 == null)
+            {
+                return 0.0;
+            }
+
+            // Extract positions
+            var position1 = pos1.Value;
+            var position2 = pos2.Value;
+
+            // Check if the bigram forms a roll (adjacent keys in the same row)
+            if (position1.row == position2.row && Math.Abs(position1.col - position2.col) == 1)
+            {
+                // Calculate base reward as the average effort for the two keys
+                double effort1 = GetEffortValue(position1.row, position1.col);
+                double effort2 = GetEffortValue(position2.row, position2.col);
+                double baseReward = (effort1 + effort2) / 2.0;
+
+                // Divide the reward by 25 to keep it in a reasonable range
+                return -(baseReward / 25.0); // Negative reward decreases effort
+            }
+
+            // No roll, no reward
+            return 0.0;
+        }
+
 
         public static double EvaluateBigramPenalty(string[][] keyboardLayout, char firstChar, char secondChar)
         {
@@ -177,6 +342,50 @@ namespace KeyboardApp
             return 0.0;
         }
 
+        public static double CalculateHandBalancePenalty(string[][] keyboardLayout, Dictionary<char, int> frequencyData)
+        {
+            // Define hand zones for the keyboard
+            int[,] handZones = new int[,]
+            {
+        { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, // Top row
+        { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, // Home row
+        { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }  // Bottom row
+            };
+
+            double leftHandFrequency = 0;
+            double rightHandFrequency = 0;
+
+            // Iterate through the keyboard layout and count occurrences for each hand
+            for (int row = 0; row < keyboardLayout.Length; row++)
+            {
+                for (int col = 0; col < keyboardLayout[row].Length; col++)
+                {
+                    char key = keyboardLayout[row][col][0];
+                    if (frequencyData.TryGetValue(key, out int frequency))
+                    {
+                        if (handZones[row, col] == 0)
+                        {
+                            leftHandFrequency += frequency;
+                        }
+                        else if (handZones[row, col] == 1)
+                        {
+                            rightHandFrequency += frequency;
+                        }
+                    }
+                }
+            }
+
+            // Calculate the imbalance
+            double totalFrequency = leftHandFrequency + rightHandFrequency;
+            if (totalFrequency == 0) return 0; // Avoid division by zero
+
+            double imbalance = Math.Abs(leftHandFrequency - rightHandFrequency) / totalFrequency;
+
+            // Scale the imbalance to a maximum penalty of 100% (1.0 multiplier)
+            double penaltyMultiplier = imbalance * 0.5;
+
+            return penaltyMultiplier;
+        }
 
 
         private static (int row, int col)? FindKeyPosition(string[][] keyboardLayout, char key)

@@ -174,17 +174,48 @@ namespace KeyboardApp
             MessageBox.Show($"Evaluation results saved to log file:\n{logFilePath}", "Evaluation Completed", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-
-
-
         private void OpenSettings(object sender, RoutedEventArgs e)
         {
             var settingsWindow = new SettingsWindow();
             if (settingsWindow.ShowDialog() == true)
             {
-                // Opcjonalnie: możesz obsłużyć zapisane ustawienia, jeśli jest taka potrzeba
-                MessageBox.Show("Settings updated successfully.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
+        private void GenerateLayout(object sender, RoutedEventArgs e)
+        {
+            int populationSize = SettingsWindow.PopulationSize;
+            GenerationAlgorithms.GenerateInitialPopulation(populationSize);
+
+            string selectedAlgorithm = SettingsWindow.SelectedAlgorithm;
+            List<string[][]> selectedParents = new List<string[][]>();
+            int numParentsSelected = SettingsWindow.NumParentsSelected;
+
+            switch (selectedAlgorithm)
+            {
+                case "Tournament":
+                    selectedParents = GenerationAlgorithms.TournamentSelection(numParentsSelected);
+                    break;
+
+                case "Roulette":
+                    selectedParents = GenerationAlgorithms.RouletteWheelSelection(numParentsSelected);
+                    break;
+
+                case "Ranked":
+                    selectedParents = GenerationAlgorithms.RankSelection(numParentsSelected);
+                    break;
+
+                case "Stochastic Universal Sampling":
+                    selectedParents = GenerationAlgorithms.StochasticUniversalSampling(numParentsSelected);
+                    break;
+
+                default:
+                    MessageBox.Show("Invalid selection method. Please check settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+            }
+
+            MessageBox.Show("Layouts generated and saved to KeyboardGeneration.log", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+
     }
 }

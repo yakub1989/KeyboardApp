@@ -4,6 +4,6 @@
         Title="Edit Key" Height="150" Width="300"
         KeyDown="OnKeyDown">
 	<Grid>
-		<TextBlock Text="Wprowadź dowolny przycisk..." VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="16"/>
+		<TextBlock Text="Press any key..." VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="16"/>
 	</Grid>
 </Window>
