@@ -2,8 +2,10 @@
 using System.Configuration;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace KeyboardApp
 {
@@ -173,6 +175,34 @@ namespace KeyboardApp
         private void CancelSettings(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;
+        }
+        private void NumericOnly(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !Regex.IsMatch(e.Text, "^[0-9]*$");
+        }
+        private void OnPasteNumeric(object sender, DataObjectPastingEventArgs e)
+        {
+            if (e.DataObject.GetDataPresent(typeof(string)))
+            {
+                string clipboardText = (string)e.DataObject.GetData(typeof(string));
+                if (!Regex.IsMatch(clipboardText, "^[0-9]*$") || int.Parse(clipboardText) > 100)
+                {
+                    e.CancelCommand();
+                }
+            }
+            else
+            {
+                e.CancelCommand();
+            }
+        }
+        private void MutationRateTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (int.TryParse(txtMutationRate.Text, out int value))
+            {
+                if (value < 0) value = 0;
+                if (value > 100) value = 100;
+                txtMutationRate.Text = value.ToString();
+            }
         }
     }
 }

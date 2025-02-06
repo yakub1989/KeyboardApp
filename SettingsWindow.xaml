@@ -56,19 +56,19 @@
                     <TextBlock Text="Genetic Algorithm Configuration" FontWeight="Bold" Margin="0,10,0,5" />
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Generation Count:" Width="120" VerticalAlignment="Center" />
-                        <TextBox x:Name="txtGenerationCount" Width="100" Text="100" />
+                        <TextBox x:Name="txtGenerationCount" Width="100" Text="100" PreviewTextInput="NumericOnly" DataObject.Pasting="OnPasteNumeric" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Population Size:" Width="120" VerticalAlignment="Center" />
-                        <TextBox x:Name="txtPopulationSize" Width="100" Text="50" />
+                        <TextBox x:Name="txtPopulationSize" Width="100" Text="50" PreviewTextInput="NumericOnly" DataObject.Pasting="OnPasteNumeric" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Elitism Count:" Width="120" VerticalAlignment="Center" />
-                        <TextBox x:Name="txtElitismCount" Width="100" Text="5" />
+                        <TextBox x:Name="txtElitismCount" Width="100" Text="5" PreviewTextInput="NumericOnly" DataObject.Pasting="OnPasteNumeric" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Mutation Rate:" Width="120" VerticalAlignment="Center" />
-                        <TextBox x:Name="txtMutationRate" Width="100" Text="0.02" />
+                        <TextBlock Text="Mutation Rate %:" Width="120" VerticalAlignment="Center" />
+                        <TextBox x:Name="txtMutationRate" Width="100" Text="0.02" PreviewTextInput="NumericOnly" DataObject.Pasting="OnPasteNumeric" TextChanged="MutationRateTextChanged" />
                     </StackPanel>
 
                     <!-- Selection Method -->
@@ -83,7 +83,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Parents Selected:" Width="120" VerticalAlignment="Center" />
-                        <TextBox x:Name="txtNumParentsSelected" Width="100" Text="3" />
+                        <TextBox x:Name="txtNumParentsSelected" Width="100" Text="3" PreviewTextInput="NumericOnly" DataObject.Pasting="OnPasteNumeric" />
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">

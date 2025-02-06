@@ -2,6 +2,7 @@
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -186,10 +187,14 @@ namespace KeyboardApp
             int populationSize = SettingsWindow.PopulationSize;
             GenerationAlgorithms.GenerateInitialPopulation(populationSize);
 
+            double mutationRate = SettingsWindow.MutationRate;
             string selectedAlgorithm = SettingsWindow.SelectedAlgorithm;
+            string selectedMutation = SettingsWindow.SelectedMutationMethod; // Fetch mutation type
+
             List<string[][]> selectedParents = new List<string[][]>();
             int numParentsSelected = SettingsWindow.NumParentsSelected;
 
+            // Selection Process
             switch (selectedAlgorithm)
             {
                 case "Tournament":
@@ -212,10 +217,16 @@ namespace KeyboardApp
                     MessageBox.Show("Invalid selection method. Please check settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
             }
-            List<string[][]> offspring = CrossoverAlgorithms.ReverseSequenceCrossover(selectedParents);
+
+            // Apply Mutation based on selected type
+            List<string[][]> offspring = MutationAlgorithms.ApplyMutation(selectedParents, mutationRate, selectedMutation);
+
+            // Update Keyboard Population
             GenerationAlgorithms.KeyboardPopulation = offspring;
+
             MessageBox.Show("Layouts generated and saved to KeyboardGeneration.log", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
 
 
     }
