@@ -189,44 +189,20 @@ namespace KeyboardApp
 
             double mutationRate = SettingsWindow.MutationRate;
             string selectedAlgorithm = SettingsWindow.SelectedAlgorithm;
-            string selectedMutation = SettingsWindow.SelectedMutationMethod; // Fetch mutation type
-
-            List<string[][]> selectedParents = new List<string[][]>();
+            string selectedMutation = SettingsWindow.SelectedMutationMethod;
             int numParentsSelected = SettingsWindow.NumParentsSelected;
 
-            // Selection Process
-            switch (selectedAlgorithm)
-            {
-                case "Tournament":
-                    selectedParents = GenerationAlgorithms.TournamentSelection(numParentsSelected);
-                    break;
+            // Pobranie rodziców na podstawie wybranego algorytmu selekcji
+            List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
 
-                case "Roulette":
-                    selectedParents = GenerationAlgorithms.RouletteWheelSelection(numParentsSelected);
-                    break;
-
-                case "Ranked":
-                    selectedParents = GenerationAlgorithms.RankSelection(numParentsSelected);
-                    break;
-
-                case "Stochastic Universal Sampling":
-                    selectedParents = GenerationAlgorithms.StochasticUniversalSampling(numParentsSelected);
-                    break;
-
-                default:
-                    MessageBox.Show("Invalid selection method. Please check settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-            }
-
-            // Apply Mutation based on selected type
+            // Mutacja według wybranej metody
             List<string[][]> offspring = MutationAlgorithms.ApplyMutation(selectedParents, mutationRate, selectedMutation);
 
-            // Update Keyboard Population
-            GenerationAlgorithms.KeyboardPopulation = offspring;
+            // Aktualizacja populacji klawiatur
+            GenerationAlgorithms.KeyboardPopulation = offspring; // Teraz setter jest publiczny
 
             MessageBox.Show("Layouts generated and saved to KeyboardGeneration.log", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
 
 
     }
