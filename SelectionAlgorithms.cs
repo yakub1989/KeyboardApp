@@ -12,50 +12,103 @@ namespace KeyboardApp
 
         public static List<string[][]> SelectParents(string selectionMethod, int numParents, List<string[][]> population)
         {
-            List<string[][]> selectedParents = selectionMethod switch
+            int elitismCount = SettingsWindow.ElitismCount;
+            List<string[][]> selectedParents = new List<string[][]>();
+
+            if (elitismCount > 0)
             {
-                "Tournament" => TournamentSelection(numParents, population),
-                "Roulette" => RouletteWheelSelection(numParents, population),
-                "Ranked" => RankSelection(numParents, population),
-                "Stochastic Universal Sampling" => StochasticUniversalSampling(numParents, population),
+                selectedParents = population
+                    .OrderBy(layout =>
+                    {
+                        StringBuilder debugInfo = new StringBuilder();
+                        return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                            EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
+                            EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
+                    })
+                    .Take(elitismCount)
+                    .ToList();
+            }
+
+            List<string[][]> remainingParents = selectionMethod switch
+            {
+                "Tournament" => TournamentSelection(numParents - selectedParents.Count, population),
+                "Roulette" => RouletteWheelSelection(numParents - selectedParents.Count, population),
+                "Ranked" => RankSelection(numParents - selectedParents.Count, population),
+                "Stochastic Universal Sampling" => StochasticUniversalSampling(numParents - selectedParents.Count, population),
                 _ => throw new ArgumentException("Invalid selection method.")
             };
 
+            selectedParents.AddRange(remainingParents);
             return selectedParents;
         }
+
 
         private static List<string[][]> TournamentSelection(int tournamentSize, List<string[][]> population)
         {
             if (population.Count == 0)
+            {
                 throw new InvalidOperationException("No population available for selection.");
+            }
+
+            if (tournamentSize <= 0)
+            {
+                throw new ArgumentException("Tournament size must be greater than zero.");
+            }
+
+            if (tournamentSize > population.Count)
+            {
+                tournamentSize = population.Count; // Prevent issues with small populations
+            }
 
             Random random = new Random();
             List<string[][]> selectedParents = new List<string[][]>();
+
+            // Debug Logging
+            string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TournamentSelection.log");
             StringBuilder logContent = new StringBuilder();
-            logContent.AppendLine("\nTournament Selection Results");
-            logContent.AppendLine("============================");
+            logContent.AppendLine($"Tournament Selection Debug Log - {DateTime.Now}");
+            logContent.AppendLine($"Tournament Size: {tournamentSize}");
+            logContent.AppendLine($"Population Count: {population.Count}");
+            logContent.AppendLine($"Total Tournaments: {population.Count / tournamentSize}");
+            logContent.AppendLine("===================================");
 
             for (int i = 0; i < population.Count / tournamentSize; i++)
             {
                 var tournamentGroup = population.OrderBy(_ => random.Next()).Take(tournamentSize).ToList();
 
-                var bestLayout = tournamentGroup.OrderBy(layout =>
+                logContent.AppendLine($"\nTournament {i + 1}: {tournamentGroup.Count} Participants");
+
+                // Evaluate fitness values
+                Dictionary<string[][], double> fitnessValues = new Dictionary<string[][], double>();
+
+                foreach (var layout in tournamentGroup)
                 {
                     StringBuilder debugInfo = new StringBuilder();
-                    return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                    double effort = EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
                         EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
                         EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
-                }).First();
 
+                    if (effort == 0)
+                    {
+                        logContent.AppendLine($"Warning: Layout evaluated with effort = 0 (possible cause of division by zero)");
+                        effort = double.MaxValue; // Assign high effort to prevent divide by zero
+                    }
+
+                    fitnessValues[layout] = effort;
+                }
+
+                // Select the best layout
+                var bestLayout = fitnessValues.OrderBy(kv => kv.Value).First().Key;
                 selectedParents.Add(bestLayout);
 
-                logContent.AppendLine($"\nTournament {i + 1}: Selected Layout with lowest effort.");
+                logContent.AppendLine("Best Layout:");
                 LogLayout(bestLayout, logContent);
             }
 
-            File.AppendAllText(logFilePath, logContent.ToString());
+            File.WriteAllText(logFilePath, logContent.ToString());
             return selectedParents;
         }
+
 
         private static List<string[][]> RouletteWheelSelection(int numParents, List<string[][]> population)
         {
@@ -76,7 +129,7 @@ namespace KeyboardApp
                     EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
                     EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
 
-                fitnessValues[layout] = 1.0 / effort; // Odwrotność wysiłku jako wartość fitness
+                fitnessValues[layout] = 1.0 / effort;
             }
 
             double totalFitness = fitnessValues.Values.Sum();
@@ -157,7 +210,7 @@ namespace KeyboardApp
                     EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
                     EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
 
-                fitnessValues[layout] = 1.0 / effort; // Odwrotność wysiłku jako wartość fitness
+                fitnessValues[layout] = 1.0 / effort;
             }
 
             double totalFitness = fitnessValues.Values.Sum();

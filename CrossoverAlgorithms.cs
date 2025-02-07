@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.IO;
 
 namespace KeyboardApp
 {
@@ -19,7 +19,7 @@ namespace KeyboardApp
 
             for (int i = 0; i < parents.Count; i += 2)
             {
-                if (i + 1 >= parents.Count) break; // Ensure we have pairs
+                if (i + 1 >= parents.Count) break;
 
                 string[][] parent1 = parents[i];
                 string[][] parent2 = parents[i + 1];
@@ -29,15 +29,6 @@ namespace KeyboardApp
 
                 switch (crossoverType)
                 {
-                    case "PMX":
-                        (child1, child2) = ApplyPMX(parent1, parent2);
-                        break;
-                    case "SCX":
-                        (child1, child2) = ApplySCX(parent1, parent2);
-                        break;
-                    case "CX":
-                        (child1, child2) = ApplyCX(parent1, parent2);
-                        break;
                     case "AEX":
                         (child1, child2) = ApplyAEX(parent1, parent2);
                         break;
@@ -61,32 +52,80 @@ namespace KeyboardApp
                 LogLayout(child2, logContent);
             }
 
-            System.IO.File.AppendAllText("KeyboardCrossover.log", logContent.ToString());
+            File.AppendAllText("KeyboardCrossover.log", logContent.ToString());
             return offspring;
-        }
-
-        private static (string[][], string[][]) ApplyPMX(string[][] parent1, string[][] parent2)
-        {
-            // Implementation of Partially Mapped Crossover (PMX)
-            return (parent1, parent2); // Placeholder
-        }
-
-        private static (string[][], string[][]) ApplySCX(string[][] parent1, string[][] parent2)
-        {
-            // Implementation of Single-Point Crossover (SCX)
-            return (parent1, parent2); // Placeholder
-        }
-
-        private static (string[][], string[][]) ApplyCX(string[][] parent1, string[][] parent2)
-        {
-            // Implementation of Cycle Crossover (CX)
-            return (parent1, parent2); // Placeholder
         }
 
         private static (string[][], string[][]) ApplyAEX(string[][] parent1, string[][] parent2)
         {
-            // Implementation of Alternating Edge Crossover (AEX)
-            return (parent1, parent2); // Placeholder
+            var flattenedParent1 = parent1.SelectMany(row => row).ToList();
+            var flattenedParent2 = parent2.SelectMany(row => row).ToList();
+
+            Dictionary<string, HashSet<string>> adjacencyList = new Dictionary<string, HashSet<string>>();
+
+            void AddEdge(string key, string neighbor)
+            {
+                if (!adjacencyList.ContainsKey(key)) adjacencyList[key] = new HashSet<string>();
+                adjacencyList[key].Add(neighbor);
+            }
+
+            for (int i = 0; i < flattenedParent1.Count; i++)
+            {
+                string current1 = flattenedParent1[i];
+                string next1 = flattenedParent1[(i + 1) % flattenedParent1.Count];
+                string prev1 = flattenedParent1[(i - 1 + flattenedParent1.Count) % flattenedParent1.Count];
+
+                string current2 = flattenedParent2[i];
+                string next2 = flattenedParent2[(i + 1) % flattenedParent2.Count];
+                string prev2 = flattenedParent2[(i - 1 + flattenedParent2.Count) % flattenedParent2.Count];
+
+                AddEdge(current1, next1);
+                AddEdge(current1, prev1);
+                AddEdge(current2, next2);
+                AddEdge(current2, prev2);
+            }
+
+            List<string> GenerateChild()
+            {
+                HashSet<string> used = new HashSet<string>();
+                List<string> child = new List<string>();
+                string current = flattenedParent1[random.Next(flattenedParent1.Count)];
+
+                while (child.Count < flattenedParent1.Count)
+                {
+                    child.Add(current);
+                    used.Add(current);
+
+                    if (adjacencyList.ContainsKey(current))
+                    {
+                        var nextChoices = adjacencyList[current].Where(n => !used.Contains(n)).ToList();
+                        if (nextChoices.Count > 0)
+                        {
+                            current = nextChoices[random.Next(nextChoices.Count)];
+                        }
+                        else
+                        {
+                            current = flattenedParent1.FirstOrDefault(k => !used.Contains(k)) ?? flattenedParent1[0];
+                        }
+                    }
+                }
+                return child;
+            }
+
+            string[][] child1Matrix = ConvertListToMatrix(GenerateChild());
+            string[][] child2Matrix = ConvertListToMatrix(GenerateChild());
+
+            return (child1Matrix, child2Matrix);
+        }
+
+        private static string[][] ConvertListToMatrix(List<string> list)
+        {
+            return new string[][]
+            {
+                list.Take(10).ToArray(),
+                list.Skip(10).Take(10).ToArray(),
+                list.Skip(20).Take(10).ToArray()
+            };
         }
 
         private static void LogLayout(string[][] layout, StringBuilder logContent)

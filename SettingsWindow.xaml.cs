@@ -28,7 +28,6 @@ namespace KeyboardApp
         public static double MutationRate { get; private set; }
         public static int NumParentsSelected { get; set; }
 
-        // 🔹 NOWA WŁAŚCIWOŚĆ: Pobiera zawartość pliku korpusu
         public static string CorpusContent
         {
             get
@@ -37,7 +36,7 @@ namespace KeyboardApp
                 {
                     return File.ReadAllText(SelectedCorpusFilePath);
                 }
-                return string.Empty; // Jeśli plik nie istnieje, zwróć pustą zawartość
+                return string.Empty;
             }
         }
 
@@ -86,7 +85,6 @@ namespace KeyboardApp
             MutationRate = double.TryParse(ConfigurationManager.AppSettings["MutationRate"], NumberStyles.Float, CultureInfo.InvariantCulture, out double mutation) ? mutation : 0.02;
             NumParentsSelected = int.TryParse(ConfigurationManager.AppSettings["NumParentsSelected"], out int tSize) ? tSize : 3;
 
-            // **Ustawianie wartości w UI**
             cmbCorpusList.SelectedItem = Path.GetFileName(SelectedCorpusFilePath);
             chkDistanceMetric.IsChecked = IsDistanceMetricEnabled;
             chkHandBalanceMetric.IsChecked = IsHandBalanceMetricEnabled;
@@ -149,15 +147,42 @@ namespace KeyboardApp
             MutationRate = double.TryParse(txtMutationRate.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double mutation) ? mutation : 0.02;
             NumParentsSelected = int.TryParse(txtNumParentsSelected.Text, out int tSize) ? tSize : 3;
 
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+            UpdateConfigValue(config, "SelectedCorpusFilePath", SelectedCorpusFilePath);
+            UpdateConfigValue(config, "IsDistanceMetricEnabled", IsDistanceMetricEnabled.ToString());
+            UpdateConfigValue(config, "IsHandBalanceMetricEnabled", IsHandBalanceMetricEnabled.ToString());
+            UpdateConfigValue(config, "IsRowSwitchMetricEnabled", IsRowSwitchMetricEnabled.ToString());
+            UpdateConfigValue(config, "SelectedOptimizationPattern", SelectedOptimizationPattern);
+            UpdateConfigValue(config, "SelectedAlgorithm", SelectedAlgorithm);
+            UpdateConfigValue(config, "SelectedMutationMethod", SelectedMutationMethod);
+            UpdateConfigValue(config, "SelectedCrossoverMethod", SelectedCrossoverMethod);
+            UpdateConfigValue(config, "GenerationCount", GenerationCount.ToString());
+            UpdateConfigValue(config, "PopulationSize", PopulationSize.ToString());
+            UpdateConfigValue(config, "ElitismCount", ElitismCount.ToString());
+            UpdateConfigValue(config, "MutationRate", MutationRate.ToString(CultureInfo.InvariantCulture));
+            UpdateConfigValue(config, "NumParentsSelected", NumParentsSelected.ToString());
+
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+
             this.DialogResult = true;
         }
-
+        private void UpdateConfigValue(Configuration config, string key, string value)
+        {
+            if (config.AppSettings.Settings[key] == null)
+            {
+                config.AppSettings.Settings.Add(key, value);
+            }
+            else
+            {
+                config.AppSettings.Settings[key].Value = value;
+            }
+        }
         private void CancelSettings(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;
         }
-
-        // 🔹 Poprawione brakujące metody 🔹
 
         private void NumericOnly(object sender, TextCompositionEventArgs e)
         {

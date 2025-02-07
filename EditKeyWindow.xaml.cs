@@ -11,35 +11,26 @@ namespace KeyboardApp
         {
             InitializeComponent();
         }
-
-        // Nasłuchuje na wciśnięcia klawiszy
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            // Lista dopuszczalnych klawiszy
             if (IsValidKey(e.Key))
             {
-                // Pobiera nazwę klawisza w uppercase
                 PressedKey = KeyToString(e.Key);
-                DialogResult = true; // Zamyka okno i sygnalizuje, że operacja zakończona
+                DialogResult = true;
             }
             else
             {
                 MessageBox.Show("Nieobsługiwany przycisk. Spróbuj ponownie.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
-
-        // Funkcja sprawdzająca, czy klawisz jest obsługiwany
         private bool IsValidKey(Key key)
         {
-            // Obsługiwane: Litery A-Z
             if (key >= Key.A && key <= Key.Z)
                 return true;
 
-            // Obsługiwane: Cyfry 0-9
             if (key >= Key.D0 && key <= Key.D9)
                 return true;
 
-            // Obsługiwane klawisze specjalne
             switch (key)
             {
                 case Key.Space:
@@ -60,18 +51,14 @@ namespace KeyboardApp
             }
         }
 
-        // Funkcja konwertująca klawisze na tekst
         private string KeyToString(Key key)
         {
-            // Litery A-Z
             if (key >= Key.A && key <= Key.Z)
                 return key.ToString().ToUpper();
 
-            // Cyfry 0-9
             if (key >= Key.D0 && key <= Key.D9)
                 return ((char)('0' + (key - Key.D0))).ToString();
 
-            // Klawisze specjalne
             switch (key)
             {
                 case Key.Space: return " ";

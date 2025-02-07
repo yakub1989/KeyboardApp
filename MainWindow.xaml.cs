@@ -27,13 +27,11 @@ namespace KeyboardApp
 
         private void OnKeyClick(object sender, RoutedEventArgs e)
         {
-            // Cast sender to Button
             if (sender is Button button)
             {
                 var editWindow = new EditKeyWindow();
                 if (editWindow.ShowDialog() == true)
                 {
-                    // Pobieramy wartość klawisza i ustawiamy na przycisku
                     button.Content = editWindow.PressedKey;
                 }
             }
@@ -41,17 +39,14 @@ namespace KeyboardApp
 
         private bool CheckForDuplicates()
         {
-            // Fetch keyboard layout content
             var buttonContents = GetSpecificButtonContents();
 
-            // Flatten the rows into a single list
             var allKeys = new List<string>();
             foreach (var row in buttonContents)
             {
                 allKeys.AddRange(row);
             }
 
-            // Track duplicates
             var seen = new HashSet<string>();
             bool isDuplicate = false;
 
@@ -73,7 +68,6 @@ namespace KeyboardApp
         }
         private void ResetLayout(object sender, RoutedEventArgs e)
         {
-            // Map of default QWERTY layout
             string[] defaultLayout = new string[]
             {
                 "Esc", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", // Row 1
@@ -84,7 +78,6 @@ namespace KeyboardApp
                 "Ctrl", "Alt", "Space", "Alt", "Ctrl"                                           // Row 6
             };
 
-            // Iterate over buttons by name (btn_00 to btn_70)
             for (int i = 0; i <= 70; i++)
             {
                 string buttonName = $"btn_{i:D2}";
@@ -97,24 +90,20 @@ namespace KeyboardApp
         }
         private string[][] GetSpecificButtonContents()
         {
-            // Define the ranges of button IDs to include
             int[][] ranges = new int[][]
             {
-                new int[] { 28, 37 }, // btn_28 to btn_37
-                new int[] { 42, 51 }, // btn_42 to btn_52
-                new int[] { 55, 64 }  // btn_55 to btn_61
+                new int[] { 28, 37 },
+                new int[] { 42, 51 },
+                new int[] { 55, 64 } 
             };
 
-            // List to store rows of content
             string[][] buttonContents = new string[ranges.Length][];
 
-            // Iterate through the ranges and collect content
             for (int row = 0; row < ranges.Length; row++)
             {
                 int start = ranges[row][0];
                 int end = ranges[row][1];
 
-                // Collect content for the current row
                 var rowContents = new List<string>();
                 for (int i = start; i <= end; i++)
                 {
@@ -126,11 +115,45 @@ namespace KeyboardApp
                     }
                 }
 
-                // Assign collected row contents to the buttonContents array
                 buttonContents[row] = rowContents.ToArray();
             }
             return buttonContents;
         }
+        private void DisplayBestLayout(string[][] bestLayout)
+        {
+            int[][] buttonIndexes = new int[][]
+            {
+        new int[] { 28, 37 }, // Górny rząd
+        new int[] { 42, 51 }, // Środkowy rząd
+        new int[] { 55, 64 }  // Dolny rząd
+            };
+
+            for (int row = 0; row < buttonIndexes.Length; row++)
+            {
+                for (int col = 0; col < bestLayout[row].Length; col++)
+                {
+                    int buttonIndex = buttonIndexes[row][col];
+                    string buttonName = $"btn_{buttonIndex:D2}";
+                    var button = FindName(buttonName) as Button;
+
+                    if (button != null)
+                    {
+                        button.Content = bestLayout[row][col];
+                    }
+                }
+            }
+
+            MessageBox.Show("Best layout has been displayed on the main screen.", "Best Layout", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        private void LogLayout(string[][] layout, StringBuilder logContent)
+        {
+            foreach (var row in layout)
+            {
+                logContent.AppendLine(string.Join(" ", row));
+            }
+            logContent.AppendLine();
+        }
+
         private void EvaluateLayout(object sender, RoutedEventArgs e)
         {
             var isDuplicate = CheckForDuplicates();
@@ -161,7 +184,6 @@ namespace KeyboardApp
             aggregatedData.AppendLine();
             aggregatedData.AppendLine($"Total Effort (including bigram penalties if enabled): {totalEffort:F2}");
 
-            // Save debug information to a .log file
             string logFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KeyboardEvaluation.log");
             using (StreamWriter writer = new StreamWriter(logFilePath, false))
             {
@@ -185,24 +207,82 @@ namespace KeyboardApp
         private void GenerateLayout(object sender, RoutedEventArgs e)
         {
             int populationSize = SettingsWindow.PopulationSize;
-            GenerationAlgorithms.GenerateInitialPopulation(populationSize);
-
+            int generationCount = SettingsWindow.GenerationCount;
             double mutationRate = SettingsWindow.MutationRate;
+            int numParentsSelected = SettingsWindow.NumParentsSelected;
             string selectedAlgorithm = SettingsWindow.SelectedAlgorithm;
             string selectedMutation = SettingsWindow.SelectedMutationMethod;
-            int numParentsSelected = SettingsWindow.NumParentsSelected;
+            string selectedCrossover = SettingsWindow.SelectedCrossoverMethod;
+            int elitismCount = SettingsWindow.ElitismCount;
 
-            // Pobranie rodziców na podstawie wybranego algorytmu selekcji
-            List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
+            StringBuilder logContent = new StringBuilder();
+            logContent.AppendLine("Evolution Process Log");
+            logContent.AppendLine("==============================");
 
-            // Mutacja według wybranej metody
-            List<string[][]> offspring = MutationAlgorithms.ApplyMutation(selectedParents, mutationRate, selectedMutation);
+            GenerationAlgorithms.GenerateInitialPopulation(populationSize);
 
-            // Aktualizacja populacji klawiatur
-            GenerationAlgorithms.KeyboardPopulation = offspring; // Teraz setter jest publiczny
+            for (int generation = 0; generation < generationCount; generation++)
+            {
+                logContent.AppendLine($"\nGeneration {generation + 1}");
+                logContent.AppendLine("----------------------------");
 
-            MessageBox.Show("Layouts generated and saved to KeyboardGeneration.log", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
+
+                List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
+
+                offspring = MutationAlgorithms.ApplyMutation(offspring, mutationRate, selectedMutation);
+
+                List<string[][]> nextGeneration = new List<string[][]>();
+
+                if (elitismCount > 0)
+                {
+                    var elites = GenerationAlgorithms.KeyboardPopulation
+                        .OrderBy(layout =>
+                        {
+                            StringBuilder debugInfo = new StringBuilder();
+                            return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                                EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
+                                EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
+                        })
+                        .Take(elitismCount)
+                        .ToList();
+
+                    nextGeneration.AddRange(elites);
+                }
+                nextGeneration.AddRange(offspring);
+
+                GenerationAlgorithms.KeyboardPopulation = nextGeneration;
+
+                var bestLayout = GenerationAlgorithms.KeyboardPopulation
+                    .OrderBy(layout =>
+                    {
+                        StringBuilder debugInfo = new StringBuilder();
+                        return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                            EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
+                            EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
+                    })
+                    .First();
+
+                logContent.AppendLine("Best Layout:");
+                LogLayout(bestLayout, logContent);
+            }
+            var finalBestLayout = GenerationAlgorithms.KeyboardPopulation
+                .OrderBy(layout =>
+                {
+                    StringBuilder debugInfo = new StringBuilder();
+                    return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                        EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
+                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
+                })
+                .First();
+
+            DisplayBestLayout(finalBestLayout);
+
+            System.IO.File.WriteAllText("EvolutionProcess.log", logContent.ToString());
+
+            MessageBox.Show("Evolution completed! The best layout is displayed.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
 
 
     }
