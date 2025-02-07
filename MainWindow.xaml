@@ -23,7 +23,7 @@
                    Margin="0,10,0,20"
                    Grid.Row="0" />
 
-        <!-- QWERTY Row -->
+        <!-- QWERTY Row (Top row) -->
         <Grid Grid.Row="2" HorizontalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -38,19 +38,19 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Content="Q" Grid.Column="0" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="W" Grid.Column="1" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="E" Grid.Column="2" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="R" Grid.Column="3" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="T" Grid.Column="4" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="Y" Grid.Column="5" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="U" Grid.Column="6" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="I" Grid.Column="7" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="O" Grid.Column="8" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="P" Grid.Column="9" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_28" Content="Q" Grid.Column="0" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_29" Content="W" Grid.Column="1" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_30" Content="E" Grid.Column="2" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_31" Content="R" Grid.Column="3" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_32" Content="T" Grid.Column="4" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_33" Content="Y" Grid.Column="5" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_34" Content="U" Grid.Column="6" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_35" Content="I" Grid.Column="7" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_36" Content="O" Grid.Column="8" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_37" Content="P" Grid.Column="9" MinWidth="50" Height="25" Click="OnKeyClick"/>
         </Grid>
 
-        <!-- Home Row -->
+        <!-- Home Row (Middle row) -->
         <Grid Grid.Row="3" HorizontalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -65,16 +65,16 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Content="A" Grid.Column="0" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="S" Grid.Column="1" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="D" Grid.Column="2" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="F" Grid.Column="3" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="G" Grid.Column="4" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="H" Grid.Column="5" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="J" Grid.Column="6" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="K" Grid.Column="7" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="L" Grid.Column="8" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content=";" Grid.Column="9" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_42" Content="A" Grid.Column="0" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_43" Content="S" Grid.Column="1" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_44" Content="D" Grid.Column="2" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_45" Content="F" Grid.Column="3" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_46" Content="G" Grid.Column="4" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_47" Content="H" Grid.Column="5" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_48" Content="J" Grid.Column="6" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_49" Content="K" Grid.Column="7" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_50" Content="L" Grid.Column="8" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_51" Content=";" Grid.Column="9" MinWidth="50" Height="25" Click="OnKeyClick"/>
         </Grid>
 
         <!-- Bottom Row -->
@@ -92,16 +92,16 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Content="Z" Grid.Column="0" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="X" Grid.Column="1" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="C" Grid.Column="2" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="V" Grid.Column="3" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="B" Grid.Column="4" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="N" Grid.Column="5" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="M" Grid.Column="6" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="," Grid.Column="7" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="." Grid.Column="8" MinWidth="50" Height="25" Click="OnKeyClick"/>
-            <Button Content="/" Grid.Column="9" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_55" Content="Z" Grid.Column="0" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_56" Content="X" Grid.Column="1" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_57" Content="C" Grid.Column="2" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_58" Content="V" Grid.Column="3" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_59" Content="B" Grid.Column="4" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_60" Content="N" Grid.Column="5" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_61" Content="M" Grid.Column="6" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_62" Content="," Grid.Column="7" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_63" Content="." Grid.Column="8" MinWidth="50" Height="25" Click="OnKeyClick"/>
+            <Button x:Name="btn_64" Content="/" Grid.Column="9" MinWidth="50" Height="25" Click="OnKeyClick"/>
         </Grid>
 
         <!-- Row 6: Buttons -->

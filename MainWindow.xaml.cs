@@ -121,18 +121,38 @@ namespace KeyboardApp
         }
         private void DisplayBestLayout(string[][] bestLayout)
         {
+            if (bestLayout == null || bestLayout.Length == 0)
+            {
+                MessageBox.Show("No valid layout to display.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Definiujemy indeksy odpowiadające przyciskom w UI
             int[][] buttonIndexes = new int[][]
             {
-        new int[] { 28, 37 }, // Górny rząd
-        new int[] { 42, 51 }, // Środkowy rząd
-        new int[] { 55, 64 }  // Dolny rząd
+        new int[] { 28, 29, 30, 31, 32, 33, 34, 35, 36, 37 }, // Górny rząd
+        new int[] { 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 }, // Środkowy rząd
+        new int[] { 55, 56, 57, 58, 59, 60, 61, 62, 63, 64 }  // Dolny rząd
             };
 
-            for (int row = 0; row < buttonIndexes.Length; row++)
+            if (bestLayout.Length != buttonIndexes.Length)
             {
+                MessageBox.Show("Mismatch between best layout and button index mapping.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            for (int row = 0; row < bestLayout.Length; row++)
+            {
+                if (bestLayout[row].Length != buttonIndexes[row].Length)
+                {
+                    MessageBox.Show($"Row {row + 1} has incorrect number of keys.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
                 for (int col = 0; col < bestLayout[row].Length; col++)
                 {
                     int buttonIndex = buttonIndexes[row][col];
+
                     string buttonName = $"btn_{buttonIndex:D2}";
                     var button = FindName(buttonName) as Button;
 
@@ -140,11 +160,16 @@ namespace KeyboardApp
                     {
                         button.Content = bestLayout[row][col];
                     }
+                    else
+                    {
+                        MessageBox.Show($"Button {buttonName} not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
                 }
             }
 
-            MessageBox.Show("Best layout has been displayed on the main screen.", "Best Layout", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Best layout successfully displayed!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
         private void LogLayout(string[][] layout, StringBuilder logContent)
         {
             foreach (var row in layout)
@@ -214,76 +239,108 @@ namespace KeyboardApp
             string selectedMutation = SettingsWindow.SelectedMutationMethod;
             string selectedCrossover = SettingsWindow.SelectedCrossoverMethod;
             int elitismCount = SettingsWindow.ElitismCount;
+            string corpusFilePath = SettingsWindow.SelectedCorpusFilePath;
 
             StringBuilder logContent = new StringBuilder();
-            logContent.AppendLine("Evolution Process Log");
-            logContent.AppendLine("==============================");
+            logContent.AppendLine("=======================================");
+            logContent.AppendLine("          OPTIMIZATION PROCESS         ");
+            logContent.AppendLine("=======================================");
 
+            // Logowanie ustawień
+            logContent.AppendLine("\nSETTINGS:");
+            logContent.AppendLine($"Corpus file: {corpusFilePath}");
+            logContent.AppendLine($"Distance metric: {(SettingsWindow.IsDistanceMetricEnabled ? "On" : "Off")}");
+            logContent.AppendLine($"Hand balance metric: {(SettingsWindow.IsHandBalanceMetricEnabled ? "On" : "Off")}");
+            logContent.AppendLine($"Row switch metric: {(SettingsWindow.IsRowSwitchMetricEnabled ? "On" : "Off")}");
+            logContent.AppendLine($"Typing style preference: {SettingsWindow.SelectedOptimizationPattern}");
+            logContent.AppendLine($"Generation count: {generationCount}");
+            logContent.AppendLine($"Population size: {populationSize}");
+            logContent.AppendLine($"Elitism count: {elitismCount}");
+            logContent.AppendLine($"Mutation rate %: {mutationRate * 100:F2}%");
+            logContent.AppendLine($"Selection method: {selectedAlgorithm}");
+            logContent.AppendLine($"Parents selected: {numParentsSelected}");
+            logContent.AppendLine($"Mutation: {selectedMutation}");
+            logContent.AppendLine($"Crossover: {selectedCrossover}");
+            logContent.AppendLine("=======================================\n");
+
+            // Inicjalizacja populacji
             GenerationAlgorithms.GenerateInitialPopulation(populationSize);
 
             for (int generation = 0; generation < generationCount; generation++)
             {
-                logContent.AppendLine($"\nGeneration {generation + 1}");
-                logContent.AppendLine("----------------------------");
+                logContent.AppendLine($"\nGENERATION {generation + 1}");
+                logContent.AppendLine("---------------------------------------");
 
+                // Ewaluacja populacji i zapis tylko Effort
+                var populationEffort = GenerationAlgorithms.KeyboardPopulation.Select(layout =>
+                {
+                    double effort = EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                        EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
+                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), new StringBuilder());
+
+                    return (layout, effort);
+                }).OrderBy(x => x.effort).ToList();
+
+                for (int i = 0; i < populationEffort.Count; i++)
+                {
+                    logContent.AppendLine($"Layout {i + 1}: Effort = {populationEffort[i].effort:F4}");
+                    LogLayout(populationEffort[i].layout, logContent);
+                }
+
+                logContent.AppendLine("\nBest Layout of this Generation:");
+                LogLayout(populationEffort.First().layout, logContent);
+
+                // Selekcja rodziców
                 List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
 
+                // Krzyżowanie
                 List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
 
+                // Mutacja
                 offspring = MutationAlgorithms.ApplyMutation(offspring, mutationRate, selectedMutation);
 
+                // Tworzenie nowej generacji z elityzmem
                 List<string[][]> nextGeneration = new List<string[][]>();
 
                 if (elitismCount > 0)
                 {
-                    var elites = GenerationAlgorithms.KeyboardPopulation
-                        .OrderBy(layout =>
-                        {
-                            StringBuilder debugInfo = new StringBuilder();
-                            return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
-                                EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
-                                EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
-                        })
-                        .Take(elitismCount)
-                        .ToList();
-
+                    var elites = populationEffort.Take(elitismCount).Select(x => x.layout).ToList();
                     nextGeneration.AddRange(elites);
                 }
+
                 nextGeneration.AddRange(offspring);
 
+                // Wypełnienie populacji nowymi losowymi układami, jeśli potrzeba
+                while (nextGeneration.Count < populationSize)
+                {
+                    nextGeneration.Add(GenerationAlgorithms.GenerateRandomKeyboardLayout(new Random()));
+                }
+
                 GenerationAlgorithms.KeyboardPopulation = nextGeneration;
-
-                var bestLayout = GenerationAlgorithms.KeyboardPopulation
-                    .OrderBy(layout =>
-                    {
-                        StringBuilder debugInfo = new StringBuilder();
-                        return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
-                            EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
-                            EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
-                    })
-                    .First();
-
-                logContent.AppendLine("Best Layout:");
-                LogLayout(bestLayout, logContent);
             }
+
+            // Finalna ewaluacja najlepszego układu
             var finalBestLayout = GenerationAlgorithms.KeyboardPopulation
                 .OrderBy(layout =>
                 {
-                    StringBuilder debugInfo = new StringBuilder();
                     return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
                         EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
-                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), debugInfo);
+                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), new StringBuilder());
                 })
                 .First();
 
+            logContent.AppendLine("\n=======================================");
+            logContent.AppendLine("FINAL BEST LAYOUT:");
+            logContent.AppendLine("=======================================");
+            LogLayout(finalBestLayout, logContent);
+
+            // Zapisywanie logów do pliku
+            System.IO.File.WriteAllText("OptimizationLog.log", logContent.ToString());
+
+            // Wyświetlenie najlepszego układu w UI
             DisplayBestLayout(finalBestLayout);
 
-            System.IO.File.WriteAllText("EvolutionProcess.log", logContent.ToString());
-
-            MessageBox.Show("Evolution completed! The best layout is displayed.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Optimization completed! Best layout displayed.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-
-
     }
 }

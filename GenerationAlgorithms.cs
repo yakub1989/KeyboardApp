@@ -25,7 +25,7 @@ namespace KeyboardApp
             LogGeneratedPopulation();
         }
 
-        private static string[][] GenerateRandomKeyboardLayout(Random random)
+        public static string[][] GenerateRandomKeyboardLayout(Random random)
         {
             char[] shuffledCharacters = AvailableCharacters.OrderBy(_ => random.Next()).ToArray();
             return new string[][]
