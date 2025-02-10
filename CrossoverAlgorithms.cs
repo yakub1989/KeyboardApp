@@ -32,6 +32,9 @@ namespace KeyboardApp
                     case "AEX":
                         (child1, child2) = ApplyAEX(parent1, parent2);
                         break;
+                    case "PMX":
+                        (child1, child2) = ApplyPMX(parent1, parent2);
+                        break;
                     default:
                         throw new ArgumentException("Invalid crossover method");
                 }
@@ -55,6 +58,7 @@ namespace KeyboardApp
             File.AppendAllText("KeyboardCrossover.log", logContent.ToString());
             return offspring;
         }
+
 
         private static (string[][], string[][]) ApplyAEX(string[][] parent1, string[][] parent2)
         {
@@ -84,7 +88,6 @@ namespace KeyboardApp
                 AddEdge(current2, next2);
                 AddEdge(current2, prev2);
             }
-
             List<string> GenerateChild()
             {
                 HashSet<string> used = new HashSet<string>();
@@ -116,6 +119,54 @@ namespace KeyboardApp
             string[][] child2Matrix = ConvertListToMatrix(GenerateChild());
 
             return (child1Matrix, child2Matrix);
+        }
+
+        private static (string[][], string[][]) ApplyPMX(string[][] parent1, string[][] parent2)
+        {
+            var flattenedParent1 = parent1.SelectMany(row => row).ToList();
+            var flattenedParent2 = parent2.SelectMany(row => row).ToList();
+            int length = flattenedParent1.Count;
+
+            List<string> child1 = new List<string>(new string[length]);
+            List<string> child2 = new List<string>(new string[length]);
+
+            Random random = new Random();
+            int start = random.Next(length / 2);
+            int end = random.Next(start, length);
+
+            Dictionary<string, string> mapping1 = new Dictionary<string, string>();
+            Dictionary<string, string> mapping2 = new Dictionary<string, string>();
+
+            for (int i = start; i < end; i++)
+            {
+                child1[i] = flattenedParent2[i];
+                child2[i] = flattenedParent1[i];
+
+                mapping1[flattenedParent2[i]] = flattenedParent1[i];
+                mapping2[flattenedParent1[i]] = flattenedParent2[i];
+            }
+
+            FillRemainingPMX(child1, flattenedParent1, mapping1, start, end);
+            FillRemainingPMX(child2, flattenedParent2, mapping2, start, end);
+
+            return (ConvertListToMatrix(child1), ConvertListToMatrix(child2));
+        }
+
+        private static void FillRemainingPMX(List<string> child, List<string> parent, Dictionary<string, string> mapping, int start, int end)
+        {
+            for (int i = 0; i < child.Count; i++)
+            {
+                if (i >= start && i < end) continue;
+
+                string gene = parent[i];
+
+                while (mapping.ContainsKey(gene))
+                {
+                    gene = mapping[gene];
+                }
+
+                child[i] = gene;
+            }
         }
 
         private static string[][] ConvertListToMatrix(List<string> list)

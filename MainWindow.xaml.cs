@@ -18,6 +18,8 @@ namespace KeyboardApp
     /// </summary>
     public partial class MainWindow : Window
     {
+        private ProgressWindow progressWindow;
+        private Thread progressThread;
         public MainWindow()
         {
             InitializeComponent();
@@ -231,6 +233,11 @@ namespace KeyboardApp
         }
         private void GenerateLayout(object sender, RoutedEventArgs e)
         {
+            // **1. Uruchomienie okna postępu w nowym wątku STA**
+            ShowProgressWindow();
+            UpdateProgress("Initializing optimization...");
+
+            // **2. Pobranie ustawień użytkownika**
             int populationSize = SettingsWindow.PopulationSize;
             int generationCount = SettingsWindow.GenerationCount;
             double mutationRate = SettingsWindow.MutationRate;
@@ -244,34 +251,20 @@ namespace KeyboardApp
             StringBuilder logContent = new StringBuilder();
             logContent.AppendLine("=======================================");
             logContent.AppendLine("          OPTIMIZATION PROCESS         ");
-            logContent.AppendLine("=======================================");
-
-            // Logowanie ustawień
-            logContent.AppendLine("\nSETTINGS:");
-            logContent.AppendLine($"Corpus file: {corpusFilePath}");
-            logContent.AppendLine($"Distance metric: {(SettingsWindow.IsDistanceMetricEnabled ? "On" : "Off")}");
-            logContent.AppendLine($"Hand balance metric: {(SettingsWindow.IsHandBalanceMetricEnabled ? "On" : "Off")}");
-            logContent.AppendLine($"Row switch metric: {(SettingsWindow.IsRowSwitchMetricEnabled ? "On" : "Off")}");
-            logContent.AppendLine($"Typing style preference: {SettingsWindow.SelectedOptimizationPattern}");
-            logContent.AppendLine($"Generation count: {generationCount}");
-            logContent.AppendLine($"Population size: {populationSize}");
-            logContent.AppendLine($"Elitism count: {elitismCount}");
-            logContent.AppendLine($"Mutation rate %: {mutationRate * 100:F2}%");
-            logContent.AppendLine($"Selection method: {selectedAlgorithm}");
-            logContent.AppendLine($"Parents selected: {numParentsSelected}");
-            logContent.AppendLine($"Mutation: {selectedMutation}");
-            logContent.AppendLine($"Crossover: {selectedCrossover}");
             logContent.AppendLine("=======================================\n");
 
-            // Inicjalizacja populacji
+            // **3. Inicjalizacja populacji**
             GenerationAlgorithms.GenerateInitialPopulation(populationSize);
+            UpdateProgress("Generation 1: Population initialized");
 
             for (int generation = 0; generation < generationCount; generation++)
             {
                 logContent.AppendLine($"\nGENERATION {generation + 1}");
                 logContent.AppendLine("---------------------------------------");
 
-                // Ewaluacja populacji i zapis tylko Effort
+                UpdateProgress($"Generation {generation + 1}: Evaluating layouts...");
+
+                // **4. Ewaluacja populacji**
                 var populationEffort = GenerationAlgorithms.KeyboardPopulation.Select(layout =>
                 {
                     double effort = EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
@@ -290,16 +283,20 @@ namespace KeyboardApp
                 logContent.AppendLine("\nBest Layout of this Generation:");
                 LogLayout(populationEffort.First().layout, logContent);
 
-                // Selekcja rodziców
+                // **5. Selekcja rodziców**
+                UpdateProgress($"Generation {generation + 1}: Selecting parents...");
                 List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
 
-                // Krzyżowanie
+                // **6. Krzyżowanie**
+                UpdateProgress($"Generation {generation + 1}: Performing crossover...");
                 List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
 
-                // Mutacja
+                // **7. Mutacja**
+                UpdateProgress($"Generation {generation + 1}: Applying mutation...");
                 offspring = MutationAlgorithms.ApplyMutation(offspring, mutationRate, selectedMutation);
 
-                // Tworzenie nowej generacji z elityzmem
+                // **8. Tworzenie nowej generacji**
+                UpdateProgress($"Generation {generation + 1}: Creating new population...");
                 List<string[][]> nextGeneration = new List<string[][]>();
 
                 if (elitismCount > 0)
@@ -307,10 +304,8 @@ namespace KeyboardApp
                     var elites = populationEffort.Take(elitismCount).Select(x => x.layout).ToList();
                     nextGeneration.AddRange(elites);
                 }
-
                 nextGeneration.AddRange(offspring);
 
-                // Wypełnienie populacji nowymi losowymi układami, jeśli potrzeba
                 while (nextGeneration.Count < populationSize)
                 {
                     nextGeneration.Add(GenerationAlgorithms.GenerateRandomKeyboardLayout(new Random()));
@@ -319,7 +314,8 @@ namespace KeyboardApp
                 GenerationAlgorithms.KeyboardPopulation = nextGeneration;
             }
 
-            // Finalna ewaluacja najlepszego układu
+            // **9. Finalna ewaluacja najlepszego układu**
+            UpdateProgress("Finalizing best layout...");
             var finalBestLayout = GenerationAlgorithms.KeyboardPopulation
                 .OrderBy(layout =>
                 {
@@ -334,13 +330,69 @@ namespace KeyboardApp
             logContent.AppendLine("=======================================");
             LogLayout(finalBestLayout, logContent);
 
-            // Zapisywanie logów do pliku
-            System.IO.File.WriteAllText("OptimizationLog.log", logContent.ToString());
+            // **10. Zamknięcie okna postępu**
+            CloseProgressWindow();
 
-            // Wyświetlenie najlepszego układu w UI
+            // **11. Zapisywanie logów do pliku**
+            File.WriteAllText("OptimizationLog.log", logContent.ToString());
+
+            // **12. Wyświetlenie najlepszego układu**
             DisplayBestLayout(finalBestLayout);
-
             MessageBox.Show("Optimization completed! Best layout displayed.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+
+        private void UpdateProgress(string status)
+        {
+            if (progressWindow != null)
+            {
+                progressWindow.Dispatcher.Invoke(() => progressWindow.UpdateStatus(status));
+            }
+        }
+
+
+        private void CloseProgressWindow()
+        {
+            if (progressWindow != null)
+            {
+                progressWindow.Dispatcher.Invoke(() =>
+                {
+                    if (progressWindow.IsVisible)
+                    {
+                        progressWindow.Close();
+                    }
+                });
+
+                // **Zamknięcie Dispatcher, aby nie blokował wątku**
+                progressWindow.Dispatcher.InvokeShutdown();
+            }
+
+            if (progressThread != null && progressThread.IsAlive)
+            {
+                progressThread.Join();
+            }
+        }
+
+
+
+        private void ShowProgressWindow()
+        {
+            progressThread = new Thread(() =>
+            {
+                progressWindow = new ProgressWindow();
+                progressWindow.Loaded += (s, e) => progressWindow.UpdateStatus("Initializing...");
+                progressWindow.Show();
+
+                // **Zapewnienie poprawnego zamknięcia wątku**
+                System.Windows.Threading.Dispatcher.Run();
+            });
+
+            // **Ustawienie wątku jako STA**
+            progressThread.SetApartmentState(ApartmentState.STA);
+            progressThread.IsBackground = true;
+            progressThread.Start();
+        }
+
+
     }
 }
