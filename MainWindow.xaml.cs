@@ -233,11 +233,9 @@ namespace KeyboardApp
         }
         private void GenerateLayout(object sender, RoutedEventArgs e)
         {
-            // **1. Uruchomienie okna postępu w nowym wątku STA**
             ShowProgressWindow();
             UpdateProgress("Initializing optimization...");
 
-            // **2. Pobranie ustawień użytkownika**
             int populationSize = SettingsWindow.PopulationSize;
             int generationCount = SettingsWindow.GenerationCount;
             double mutationRate = SettingsWindow.MutationRate;
@@ -253,7 +251,6 @@ namespace KeyboardApp
             logContent.AppendLine("          OPTIMIZATION PROCESS         ");
             logContent.AppendLine("=======================================\n");
 
-            // **3. Inicjalizacja populacji**
             GenerationAlgorithms.GenerateInitialPopulation(populationSize);
             UpdateProgress("Generation 1: Population initialized");
 
@@ -264,7 +261,6 @@ namespace KeyboardApp
 
                 UpdateProgress($"Generation {generation + 1}: Evaluating layouts...");
 
-                // **4. Ewaluacja populacji**
                 var populationEffort = GenerationAlgorithms.KeyboardPopulation.Select(layout =>
                 {
                     double effort = EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
@@ -283,19 +279,15 @@ namespace KeyboardApp
                 logContent.AppendLine("\nBest Layout of this Generation:");
                 LogLayout(populationEffort.First().layout, logContent);
 
-                // **5. Selekcja rodziców**
                 UpdateProgress($"Generation {generation + 1}: Selecting parents...");
                 List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
 
-                // **6. Krzyżowanie**
                 UpdateProgress($"Generation {generation + 1}: Performing crossover...");
                 List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
 
-                // **7. Mutacja**
                 UpdateProgress($"Generation {generation + 1}: Applying mutation...");
                 offspring = MutationAlgorithms.ApplyMutation(offspring, mutationRate, selectedMutation);
 
-                // **8. Tworzenie nowej generacji**
                 UpdateProgress($"Generation {generation + 1}: Creating new population...");
                 List<string[][]> nextGeneration = new List<string[][]>();
 
@@ -313,8 +305,6 @@ namespace KeyboardApp
 
                 GenerationAlgorithms.KeyboardPopulation = nextGeneration;
             }
-
-            // **9. Finalna ewaluacja najlepszego układu**
             UpdateProgress("Finalizing best layout...");
             var finalBestLayout = GenerationAlgorithms.KeyboardPopulation
                 .OrderBy(layout =>
@@ -330,13 +320,10 @@ namespace KeyboardApp
             logContent.AppendLine("=======================================");
             LogLayout(finalBestLayout, logContent);
 
-            // **10. Zamknięcie okna postępu**
             CloseProgressWindow();
 
-            // **11. Zapisywanie logów do pliku**
             File.WriteAllText("OptimizationLog.log", logContent.ToString());
 
-            // **12. Wyświetlenie najlepszego układu**
             DisplayBestLayout(finalBestLayout);
         }
 
@@ -367,13 +354,13 @@ namespace KeyboardApp
                     progressWindow.Dispatcher.InvokeShutdown();
                 }
 
-                progressWindow = null; // **Resetujemy referencję**
+                progressWindow = null; 
             }
 
             if (progressThread != null && progressThread.IsAlive)
             {
                 progressThread.Join();
-                progressThread = null; // **Resetujemy referencję, by uniknąć ponownego użycia zamkniętego wątku**
+                progressThread = null;
             }
         }
 
@@ -381,7 +368,7 @@ namespace KeyboardApp
         {
             if (progressThread != null && progressThread.IsAlive)
             {
-                return; // **Zapobiega ponownemu uruchomieniu wątku, jeśli już działa**
+                return;
             }
 
             progressThread = new Thread(() =>
