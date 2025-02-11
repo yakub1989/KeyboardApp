@@ -363,36 +363,40 @@ namespace KeyboardApp
                     }
                 });
 
-                // **Zamknięcie Dispatcher, aby nie blokował wątku**
-                progressWindow.Dispatcher.InvokeShutdown();
+                if (!progressWindow.Dispatcher.HasShutdownStarted)
+                {
+                    progressWindow.Dispatcher.InvokeShutdown();
+                }
+
+                progressWindow = null; // **Resetujemy referencję**
             }
 
             if (progressThread != null && progressThread.IsAlive)
             {
                 progressThread.Join();
+                progressThread = null; // **Resetujemy referencję, by uniknąć ponownego użycia zamkniętego wątku**
             }
         }
 
-
-
         private void ShowProgressWindow()
         {
+            if (progressThread != null && progressThread.IsAlive)
+            {
+                return; // **Zapobiega ponownemu uruchomieniu wątku, jeśli już działa**
+            }
+
             progressThread = new Thread(() =>
             {
                 progressWindow = new ProgressWindow();
                 progressWindow.Loaded += (s, e) => progressWindow.UpdateStatus("Initializing...");
                 progressWindow.Show();
 
-                // **Zapewnienie poprawnego zamknięcia wątku**
                 System.Windows.Threading.Dispatcher.Run();
             });
 
-            // **Ustawienie wątku jako STA**
             progressThread.SetApartmentState(ApartmentState.STA);
             progressThread.IsBackground = true;
             progressThread.Start();
         }
-
-
     }
 }
