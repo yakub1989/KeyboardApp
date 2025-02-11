@@ -68,7 +68,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Mutation Rate %:" Width="120" VerticalAlignment="Center" />
-                        <TextBox x:Name="txtMutationRate" Width="100" Text="0.02" PreviewTextInput="NumericOnly" DataObject.Pasting="OnPasteNumeric" TextChanged="MutationRateTextChanged" />
+                        <TextBox x:Name="txtMutationRate" Width="100" Text="15" PreviewTextInput="NumericOnly" DataObject.Pasting="OnPasteNumeric" TextChanged="MutationRateTextChanged" />
                     </StackPanel>
 
                     <!-- Selection Method -->
@@ -101,8 +101,6 @@
                         <TextBlock Text="Crossover:" VerticalAlignment="Center" Width="120"/>
                         <ComboBox x:Name="cmbCrossoverMethod" Width="200" Margin="0,0,10,0">
                             <ComboBoxItem Content="PMX"/>
-                            <ComboBoxItem Content="SCX"/>
-                            <ComboBoxItem Content="CX"/>
                             <ComboBoxItem Content="AEX" IsSelected="True"/>
                         </ComboBox>
                     </StackPanel>

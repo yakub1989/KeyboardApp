@@ -20,9 +20,9 @@ namespace KeyboardApp
 
             foreach (var individual in population)
             {
-                double mutationChance = random.NextDouble() * 100; // Generate a value between 0 and 100
+                double mutationChance = random.NextDouble() * 100;
 
-                if (mutationChance <= mutationRate) // Apply mutation only if within the mutation rate
+                if (mutationChance <= mutationRate)
                 {
                     string[][] mutatedIndividual;
                     do
@@ -47,7 +47,7 @@ namespace KeyboardApp
                 }
                 else
                 {
-                    mutatedOffspring.Add(individual); // No mutation, copy as-is
+                    mutatedOffspring.Add(individual);
                 }
             }
 
@@ -64,7 +64,7 @@ namespace KeyboardApp
             {
                 start = random.Next(flattened.Count - 1);
                 end = random.Next(start, flattened.Count);
-            } while (end - start < 2); // Zapewnienie, że zmiana jest znacząca
+            } while (end - start < 2);
 
             flattened.Reverse(start, end - start + 1);
 
@@ -79,7 +79,7 @@ namespace KeyboardApp
         private static string[][] ApplySwap(string[][] parent)
         {
             List<string> flattened = parent.SelectMany(row => row).ToList();
-            int swaps = random.Next(2, 5); // Co najmniej 2 swapy, maksymalnie 5
+            int swaps = random.Next(2, 5);
 
             for (int i = 0; i < swaps; i++)
             {
@@ -88,9 +88,8 @@ namespace KeyboardApp
                 {
                     index1 = random.Next(flattened.Count);
                     index2 = random.Next(flattened.Count);
-                } while (index1 == index2 || Math.Abs(index1 - index2) < 3); // Gwarantuje, że zmiana nie jest minimalna
+                } while (index1 == index2 || Math.Abs(index1 - index2) < 3);
 
-                // Zamiana znaków
                 (flattened[index1], flattened[index2]) = (flattened[index2], flattened[index1]);
             }
 
@@ -110,15 +109,12 @@ namespace KeyboardApp
             {
                 start = random.Next(flattened.Count - 1);
                 end = random.Next(start, flattened.Count);
-            } while (end - start < 2); // Zapewniamy, że mamy przynajmniej 3 znaki do wymieszania
+            } while (end - start < 2);
 
-            // Pobranie fragmentu do przetasowania
             List<string> segment = flattened.GetRange(start, end - start + 1);
 
-            // Przetasowanie wybranego segmentu
             segment = segment.OrderBy(x => random.Next()).ToList();
 
-            // Zastąpienie oryginalnych wartości nową kolejnością
             flattened.RemoveRange(start, end - start + 1);
             flattened.InsertRange(start, segment);
 
@@ -133,14 +129,14 @@ namespace KeyboardApp
         {
             List<string> flattened = parent.SelectMany(row => row).ToList();
 
-            int start = random.Next(flattened.Count - 3); // Ensure at least 3 elements remain
-            int length = random.Next(3, 6); // Select a segment of 3 to 6 elements
+            int start = random.Next(flattened.Count - 3);
+            int length = random.Next(3, 6);
             int end = Math.Min(start + length, flattened.Count);
 
             List<string> segment = flattened.GetRange(start, end - start);
             flattened.RemoveRange(start, end - start);
 
-            int insertPosition = random.Next(flattened.Count + 1); // New insertion point
+            int insertPosition = random.Next(flattened.Count + 1);
             flattened.InsertRange(insertPosition, segment);
 
             return new string[][]

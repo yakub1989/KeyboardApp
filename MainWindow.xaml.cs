@@ -18,6 +18,8 @@ namespace KeyboardApp
     /// </summary>
     public partial class MainWindow : Window
     {
+        private ProgressWindow progressWindow;
+        private Thread progressThread;
         public MainWindow()
         {
             InitializeComponent();
@@ -27,13 +29,11 @@ namespace KeyboardApp
 
         private void OnKeyClick(object sender, RoutedEventArgs e)
         {
-            // Cast sender to Button
             if (sender is Button button)
             {
                 var editWindow = new EditKeyWindow();
                 if (editWindow.ShowDialog() == true)
                 {
-                    // Pobieramy wartość klawisza i ustawiamy na przycisku
                     button.Content = editWindow.PressedKey;
                 }
             }
@@ -41,17 +41,14 @@ namespace KeyboardApp
 
         private bool CheckForDuplicates()
         {
-            // Fetch keyboard layout content
             var buttonContents = GetSpecificButtonContents();
 
-            // Flatten the rows into a single list
             var allKeys = new List<string>();
             foreach (var row in buttonContents)
             {
                 allKeys.AddRange(row);
             }
 
-            // Track duplicates
             var seen = new HashSet<string>();
             bool isDuplicate = false;
 
@@ -73,7 +70,6 @@ namespace KeyboardApp
         }
         private void ResetLayout(object sender, RoutedEventArgs e)
         {
-            // Map of default QWERTY layout
             string[] defaultLayout = new string[]
             {
                 "Esc", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", // Row 1
@@ -84,7 +80,6 @@ namespace KeyboardApp
                 "Ctrl", "Alt", "Space", "Alt", "Ctrl"                                           // Row 6
             };
 
-            // Iterate over buttons by name (btn_00 to btn_70)
             for (int i = 0; i <= 70; i++)
             {
                 string buttonName = $"btn_{i:D2}";
@@ -97,24 +92,20 @@ namespace KeyboardApp
         }
         private string[][] GetSpecificButtonContents()
         {
-            // Define the ranges of button IDs to include
             int[][] ranges = new int[][]
             {
-                new int[] { 28, 37 }, // btn_28 to btn_37
-                new int[] { 42, 51 }, // btn_42 to btn_52
-                new int[] { 55, 64 }  // btn_55 to btn_61
+                new int[] { 28, 37 },
+                new int[] { 42, 51 },
+                new int[] { 55, 64 } 
             };
 
-            // List to store rows of content
             string[][] buttonContents = new string[ranges.Length][];
 
-            // Iterate through the ranges and collect content
             for (int row = 0; row < ranges.Length; row++)
             {
                 int start = ranges[row][0];
                 int end = ranges[row][1];
 
-                // Collect content for the current row
                 var rowContents = new List<string>();
                 for (int i = start; i <= end; i++)
                 {
@@ -126,11 +117,70 @@ namespace KeyboardApp
                     }
                 }
 
-                // Assign collected row contents to the buttonContents array
                 buttonContents[row] = rowContents.ToArray();
             }
             return buttonContents;
         }
+        private void DisplayBestLayout(string[][] bestLayout)
+        {
+            if (bestLayout == null || bestLayout.Length == 0)
+            {
+                MessageBox.Show("No valid layout to display.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Definiujemy indeksy odpowiadające przyciskom w UI
+            int[][] buttonIndexes = new int[][]
+            {
+        new int[] { 28, 29, 30, 31, 32, 33, 34, 35, 36, 37 }, // Górny rząd
+        new int[] { 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 }, // Środkowy rząd
+        new int[] { 55, 56, 57, 58, 59, 60, 61, 62, 63, 64 }  // Dolny rząd
+            };
+
+            if (bestLayout.Length != buttonIndexes.Length)
+            {
+                MessageBox.Show("Mismatch between best layout and button index mapping.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            for (int row = 0; row < bestLayout.Length; row++)
+            {
+                if (bestLayout[row].Length != buttonIndexes[row].Length)
+                {
+                    MessageBox.Show($"Row {row + 1} has incorrect number of keys.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                for (int col = 0; col < bestLayout[row].Length; col++)
+                {
+                    int buttonIndex = buttonIndexes[row][col];
+
+                    string buttonName = $"btn_{buttonIndex:D2}";
+                    var button = FindName(buttonName) as Button;
+
+                    if (button != null)
+                    {
+                        button.Content = bestLayout[row][col];
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Button {buttonName} not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+
+            MessageBox.Show("Optimization process complete.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void LogLayout(string[][] layout, StringBuilder logContent)
+        {
+            foreach (var row in layout)
+            {
+                logContent.AppendLine(string.Join(" ", row));
+            }
+            logContent.AppendLine();
+        }
+
         private void EvaluateLayout(object sender, RoutedEventArgs e)
         {
             var isDuplicate = CheckForDuplicates();
@@ -161,7 +211,6 @@ namespace KeyboardApp
             aggregatedData.AppendLine();
             aggregatedData.AppendLine($"Total Effort (including bigram penalties if enabled): {totalEffort:F2}");
 
-            // Save debug information to a .log file
             string logFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KeyboardEvaluation.log");
             using (StreamWriter writer = new StreamWriter(logFilePath, false))
             {
@@ -184,50 +233,169 @@ namespace KeyboardApp
         }
         private void GenerateLayout(object sender, RoutedEventArgs e)
         {
+            // **1. Uruchomienie okna postępu w nowym wątku STA**
+            ShowProgressWindow();
+            UpdateProgress("Initializing optimization...");
+
+            // **2. Pobranie ustawień użytkownika**
             int populationSize = SettingsWindow.PopulationSize;
-            GenerationAlgorithms.GenerateInitialPopulation(populationSize);
-
+            int generationCount = SettingsWindow.GenerationCount;
             double mutationRate = SettingsWindow.MutationRate;
-            string selectedAlgorithm = SettingsWindow.SelectedAlgorithm;
-            string selectedMutation = SettingsWindow.SelectedMutationMethod; // Fetch mutation type
-
-            List<string[][]> selectedParents = new List<string[][]>();
             int numParentsSelected = SettingsWindow.NumParentsSelected;
+            string selectedAlgorithm = SettingsWindow.SelectedAlgorithm;
+            string selectedMutation = SettingsWindow.SelectedMutationMethod;
+            string selectedCrossover = SettingsWindow.SelectedCrossoverMethod;
+            int elitismCount = SettingsWindow.ElitismCount;
+            string corpusFilePath = SettingsWindow.SelectedCorpusFilePath;
 
-            // Selection Process
-            switch (selectedAlgorithm)
+            StringBuilder logContent = new StringBuilder();
+            logContent.AppendLine("=======================================");
+            logContent.AppendLine("          OPTIMIZATION PROCESS         ");
+            logContent.AppendLine("=======================================\n");
+
+            // **3. Inicjalizacja populacji**
+            GenerationAlgorithms.GenerateInitialPopulation(populationSize);
+            UpdateProgress("Generation 1: Population initialized");
+
+            for (int generation = 0; generation < generationCount; generation++)
             {
-                case "Tournament":
-                    selectedParents = GenerationAlgorithms.TournamentSelection(numParentsSelected);
-                    break;
+                logContent.AppendLine($"\nGENERATION {generation + 1}");
+                logContent.AppendLine("---------------------------------------");
 
-                case "Roulette":
-                    selectedParents = GenerationAlgorithms.RouletteWheelSelection(numParentsSelected);
-                    break;
+                UpdateProgress($"Generation {generation + 1}: Evaluating layouts...");
 
-                case "Ranked":
-                    selectedParents = GenerationAlgorithms.RankSelection(numParentsSelected);
-                    break;
+                // **4. Ewaluacja populacji**
+                var populationEffort = GenerationAlgorithms.KeyboardPopulation.Select(layout =>
+                {
+                    double effort = EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                        EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
+                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), new StringBuilder());
 
-                case "Stochastic Universal Sampling":
-                    selectedParents = GenerationAlgorithms.StochasticUniversalSampling(numParentsSelected);
-                    break;
+                    return (layout, effort);
+                }).OrderBy(x => x.effort).ToList();
 
-                default:
-                    MessageBox.Show("Invalid selection method. Please check settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                for (int i = 0; i < populationEffort.Count; i++)
+                {
+                    logContent.AppendLine($"Layout {i + 1}: Effort = {populationEffort[i].effort:F4}");
+                    LogLayout(populationEffort[i].layout, logContent);
+                }
+
+                logContent.AppendLine("\nBest Layout of this Generation:");
+                LogLayout(populationEffort.First().layout, logContent);
+
+                // **5. Selekcja rodziców**
+                UpdateProgress($"Generation {generation + 1}: Selecting parents...");
+                List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
+
+                // **6. Krzyżowanie**
+                UpdateProgress($"Generation {generation + 1}: Performing crossover...");
+                List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
+
+                // **7. Mutacja**
+                UpdateProgress($"Generation {generation + 1}: Applying mutation...");
+                offspring = MutationAlgorithms.ApplyMutation(offspring, mutationRate, selectedMutation);
+
+                // **8. Tworzenie nowej generacji**
+                UpdateProgress($"Generation {generation + 1}: Creating new population...");
+                List<string[][]> nextGeneration = new List<string[][]>();
+
+                if (elitismCount > 0)
+                {
+                    var elites = populationEffort.Take(elitismCount).Select(x => x.layout).ToList();
+                    nextGeneration.AddRange(elites);
+                }
+                nextGeneration.AddRange(offspring);
+
+                while (nextGeneration.Count < populationSize)
+                {
+                    nextGeneration.Add(GenerationAlgorithms.GenerateRandomKeyboardLayout(new Random()));
+                }
+
+                GenerationAlgorithms.KeyboardPopulation = nextGeneration;
             }
 
-            // Apply Mutation based on selected type
-            List<string[][]> offspring = MutationAlgorithms.ApplyMutation(selectedParents, mutationRate, selectedMutation);
+            // **9. Finalna ewaluacja najlepszego układu**
+            UpdateProgress("Finalizing best layout...");
+            var finalBestLayout = GenerationAlgorithms.KeyboardPopulation
+                .OrderBy(layout =>
+                {
+                    return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
+                        EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
+                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), new StringBuilder());
+                })
+                .First();
 
-            // Update Keyboard Population
-            GenerationAlgorithms.KeyboardPopulation = offspring;
+            logContent.AppendLine("\n=======================================");
+            logContent.AppendLine("FINAL BEST LAYOUT:");
+            logContent.AppendLine("=======================================");
+            LogLayout(finalBestLayout, logContent);
 
-            MessageBox.Show("Layouts generated and saved to KeyboardGeneration.log", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            // **10. Zamknięcie okna postępu**
+            CloseProgressWindow();
+
+            // **11. Zapisywanie logów do pliku**
+            File.WriteAllText("OptimizationLog.log", logContent.ToString());
+
+            // **12. Wyświetlenie najlepszego układu**
+            DisplayBestLayout(finalBestLayout);
         }
 
 
+        private void UpdateProgress(string status)
+        {
+            if (progressWindow != null)
+            {
+                progressWindow.Dispatcher.Invoke(() => progressWindow.UpdateStatus(status));
+            }
+        }
 
+
+        private void CloseProgressWindow()
+        {
+            if (progressWindow != null)
+            {
+                progressWindow.Dispatcher.Invoke(() =>
+                {
+                    if (progressWindow.IsVisible)
+                    {
+                        progressWindow.Close();
+                    }
+                });
+
+                if (!progressWindow.Dispatcher.HasShutdownStarted)
+                {
+                    progressWindow.Dispatcher.InvokeShutdown();
+                }
+
+                progressWindow = null; // **Resetujemy referencję**
+            }
+
+            if (progressThread != null && progressThread.IsAlive)
+            {
+                progressThread.Join();
+                progressThread = null; // **Resetujemy referencję, by uniknąć ponownego użycia zamkniętego wątku**
+            }
+        }
+
+        private void ShowProgressWindow()
+        {
+            if (progressThread != null && progressThread.IsAlive)
+            {
+                return; // **Zapobiega ponownemu uruchomieniu wątku, jeśli już działa**
+            }
+
+            progressThread = new Thread(() =>
+            {
+                progressWindow = new ProgressWindow();
+                progressWindow.Loaded += (s, e) => progressWindow.UpdateStatus("Initializing...");
+                progressWindow.Show();
+
+                System.Windows.Threading.Dispatcher.Run();
+            });
+
+            progressThread.SetApartmentState(ApartmentState.STA);
+            progressThread.IsBackground = true;
+            progressThread.Start();
+        }
     }
 }

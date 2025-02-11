@@ -28,6 +28,17 @@ namespace KeyboardApp
         public static double MutationRate { get; private set; }
         public static int NumParentsSelected { get; set; }
 
+        public static string CorpusContent
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(SelectedCorpusFilePath) && File.Exists(SelectedCorpusFilePath))
+                {
+                    return File.ReadAllText(SelectedCorpusFilePath);
+                }
+                return string.Empty;
+            }
+        }
 
         public SettingsWindow()
         {
@@ -72,9 +83,8 @@ namespace KeyboardApp
             PopulationSize = int.Parse(ConfigurationManager.AppSettings["PopulationSize"] ?? "50");
             ElitismCount = int.Parse(ConfigurationManager.AppSettings["ElitismCount"] ?? "5");
             MutationRate = double.TryParse(ConfigurationManager.AppSettings["MutationRate"], NumberStyles.Float, CultureInfo.InvariantCulture, out double mutation) ? mutation : 0.02;
-            NumParentsSelected= int.TryParse(ConfigurationManager.AppSettings["NumParentsSelected"], out int tSize) ? tSize : 3;
+            NumParentsSelected = int.TryParse(ConfigurationManager.AppSettings["NumParentsSelected"], out int tSize) ? tSize : 3;
 
-            // **Ustawianie wartości w UI**
             cmbCorpusList.SelectedItem = Path.GetFileName(SelectedCorpusFilePath);
             chkDistanceMetric.IsChecked = IsDistanceMetricEnabled;
             chkHandBalanceMetric.IsChecked = IsHandBalanceMetricEnabled;
@@ -158,8 +168,6 @@ namespace KeyboardApp
 
             this.DialogResult = true;
         }
-
-
         private void UpdateConfigValue(Configuration config, string key, string value)
         {
             if (config.AppSettings.Settings[key] == null)
@@ -171,15 +179,16 @@ namespace KeyboardApp
                 config.AppSettings.Settings[key].Value = value;
             }
         }
-
         private void CancelSettings(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;
         }
+
         private void NumericOnly(object sender, TextCompositionEventArgs e)
         {
             e.Handled = !Regex.IsMatch(e.Text, "^[0-9]*$");
         }
+
         private void OnPasteNumeric(object sender, DataObjectPastingEventArgs e)
         {
             if (e.DataObject.GetDataPresent(typeof(string)))
@@ -195,6 +204,7 @@ namespace KeyboardApp
                 e.CancelCommand();
             }
         }
+
         private void MutationRateTextChanged(object sender, TextChangedEventArgs e)
         {
             if (int.TryParse(txtMutationRate.Text, out int value))
