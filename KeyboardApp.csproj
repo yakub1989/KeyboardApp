@@ -9,7 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\loading.gif" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Diacritics" Version="3.3.29" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\loading.gif">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
   </ItemGroup>
 
 </Project>

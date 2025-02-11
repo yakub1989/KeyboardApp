@@ -169,7 +169,7 @@ namespace KeyboardApp
                 }
             }
 
-            MessageBox.Show("Best layout successfully displayed!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Optimization process complete.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void LogLayout(string[][] layout, StringBuilder logContent)
@@ -338,7 +338,6 @@ namespace KeyboardApp
 
             // **12. Wyświetlenie najlepszego układu**
             DisplayBestLayout(finalBestLayout);
-            MessageBox.Show("Optimization completed! Best layout displayed.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
 
