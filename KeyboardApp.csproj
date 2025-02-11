@@ -9,17 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Resources\loading.gif" />
+    <None Remove="Corpus\pantadeusz.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Corpus\pantadeusz.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Diacritics" Version="3.3.29" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="Resources\loading.gif">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
   </ItemGroup>
 
 </Project>
