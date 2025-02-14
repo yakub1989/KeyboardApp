@@ -2,14 +2,6 @@
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace KeyboardApp
 {
@@ -201,17 +193,20 @@ namespace KeyboardApp
                 return;
             }
 
+            // Wykonanie analizy korpusu jednokrotnie
+            EvaluationAlgorithm.ClearCache();
             string corpusContent = File.ReadAllText(corpusFilePath);
-            var frequencyData = EvaluationAlgorithm.AnalyzeCorpusFrequency(corpusContent);
-            var bigramData = EvaluationAlgorithm.AnalyzeCorpusBigrams(corpusContent);
+            EvaluationAlgorithm.PrecomputeCorpusAnalysis(corpusContent);
 
+            // Ocena układu klawiatury na podstawie wcześniej obliczonych wartości
             StringBuilder debugBigramInfo = new StringBuilder();
-            double totalEffort = EvaluationAlgorithm.EvaluateKeyboardEffort(buttonContents, frequencyData, bigramData, debugBigramInfo);
+            double totalEffort = EvaluationAlgorithm.EvaluateKeyboardEffort(buttonContents, debugBigramInfo);
 
             aggregatedData.AppendLine();
             aggregatedData.AppendLine($"Total Effort (including bigram penalties if enabled): {totalEffort:F2}");
 
-            string logFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KeyboardEvaluation.log");
+            // Logowanie wyników
+            string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KeyboardEvaluation.log");
             using (StreamWriter writer = new StreamWriter(logFilePath, false))
             {
                 writer.WriteLine("Keyboard Layout Evaluation Log");
@@ -223,6 +218,7 @@ namespace KeyboardApp
 
             MessageBox.Show($"Evaluation results saved to log file:\n{logFilePath}", "Evaluation Completed", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
 
         private void OpenSettings(object sender, RoutedEventArgs e)
         {
@@ -245,6 +241,17 @@ namespace KeyboardApp
             string selectedCrossover = SettingsWindow.SelectedCrossoverMethod;
             int elitismCount = SettingsWindow.ElitismCount;
             string corpusFilePath = SettingsWindow.SelectedCorpusFilePath;
+            EvaluationAlgorithm.ClearCache();
+
+            // Wykonanie analizy korpusu jednokrotnie przed rozpoczęciem generacji
+            if (!File.Exists(corpusFilePath))
+            {
+                MessageBox.Show("Corpus file not found. Please select a valid corpus in settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            string corpusContent = File.ReadAllText(corpusFilePath);
+            EvaluationAlgorithm.PrecomputeCorpusAnalysis(corpusContent);
 
             StringBuilder logContent = new StringBuilder();
             logContent.AppendLine("=======================================");
@@ -261,14 +268,10 @@ namespace KeyboardApp
 
                 UpdateProgress($"Generation {generation + 1}: Evaluating layouts...");
 
-                var populationEffort = GenerationAlgorithms.KeyboardPopulation.Select(layout =>
-                {
-                    double effort = EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
-                        EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
-                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), new StringBuilder());
-
-                    return (layout, effort);
-                }).OrderBy(x => x.effort).ToList();
+                var populationEffort = GenerationAlgorithms.KeyboardPopulation
+                    .Select(layout => (layout, effort: EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder())))
+                    .OrderBy(x => x.effort)
+                    .ToList();
 
                 for (int i = 0; i < populationEffort.Count; i++)
                 {
@@ -305,14 +308,10 @@ namespace KeyboardApp
 
                 GenerationAlgorithms.KeyboardPopulation = nextGeneration;
             }
+
             UpdateProgress("Finalizing best layout...");
             var finalBestLayout = GenerationAlgorithms.KeyboardPopulation
-                .OrderBy(layout =>
-                {
-                    return EvaluationAlgorithm.EvaluateKeyboardEffort(layout,
-                        EvaluationAlgorithm.AnalyzeCorpusFrequency(SettingsWindow.CorpusContent),
-                        EvaluationAlgorithm.AnalyzeCorpusBigrams(SettingsWindow.CorpusContent), new StringBuilder());
-                })
+                .OrderBy(layout => EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder()))
                 .First();
 
             logContent.AppendLine("\n=======================================");
@@ -326,6 +325,7 @@ namespace KeyboardApp
 
             DisplayBestLayout(finalBestLayout);
         }
+
 
 
         private void UpdateProgress(string status)
