@@ -243,7 +243,7 @@ namespace KeyboardApp
             string corpusFilePath = SettingsWindow.SelectedCorpusFilePath;
             EvaluationAlgorithm.ClearCache();
 
-            // Wykonanie analizy korpusu jednokrotnie przed rozpoczęciem generacji
+            // 🔹 Sprawdzenie, czy plik korpusu istnieje
             if (!File.Exists(corpusFilePath))
             {
                 MessageBox.Show("Corpus file not found. Please select a valid corpus in settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -258,6 +258,19 @@ namespace KeyboardApp
             logContent.AppendLine("          OPTIMIZATION PROCESS         ");
             logContent.AppendLine("=======================================\n");
 
+            // 🔹 Logowanie analizy korpusu (znaki i ich częstotliwości)
+            logContent.AppendLine("Corpus Character Frequencies:");
+            logContent.AppendLine("---------------------------------------");
+
+            foreach (var entry in EvaluationAlgorithm.publicCorpusFrequencyData.OrderByDescending(x => x.Value))
+            {
+                logContent.AppendLine($"Character: '{entry.Key}'  |  Frequency: {entry.Value}");
+            }
+
+            File.WriteAllText("CorpusAnalysis.log", logContent.ToString()); // Logowanie do osobnego pliku
+
+            UpdateProgress("Corpus analysis completed.");
+
             GenerationAlgorithms.GenerateInitialPopulation(populationSize);
             UpdateProgress("Generation 1: Population initialized");
 
@@ -266,7 +279,7 @@ namespace KeyboardApp
                 logContent.AppendLine($"\nGENERATION {generation + 1}");
                 logContent.AppendLine("---------------------------------------");
 
-                UpdateProgress($"Generation {generation + 1}: Evaluating layouts...");
+                //UpdateProgress($"Generation {generation + 1}: Evaluating layouts...");
 
                 var populationEffort = GenerationAlgorithms.KeyboardPopulation
                     .Select(layout => (layout, effort: EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder())))
@@ -282,16 +295,16 @@ namespace KeyboardApp
                 logContent.AppendLine("\nBest Layout of this Generation:");
                 LogLayout(populationEffort.First().layout, logContent);
 
-                UpdateProgress($"Generation {generation + 1}: Selecting parents...");
+                UpdateProgress($"Generation {generation + 1}   Best effort {populationEffort[0].effort}");
                 List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
 
-                UpdateProgress($"Generation {generation + 1}: Performing crossover...");
+                //UpdateProgress($"Generation {generation + 1}: Performing crossover...");
                 List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
 
-                UpdateProgress($"Generation {generation + 1}: Applying mutation...");
+                //UpdateProgress($"Generation {generation + 1}: Applying mutation...");
                 offspring = MutationAlgorithms.ApplyMutation(offspring, mutationRate, selectedMutation);
 
-                UpdateProgress($"Generation {generation + 1}: Creating new population...");
+                //UpdateProgress($"Generation {generation + 1}: Creating new population...");
                 List<string[][]> nextGeneration = new List<string[][]>();
 
                 if (elitismCount > 0)
@@ -325,6 +338,7 @@ namespace KeyboardApp
 
             DisplayBestLayout(finalBestLayout);
         }
+
 
 
 

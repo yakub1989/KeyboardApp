@@ -13,23 +13,26 @@ namespace KeyboardApp
 
         private static Dictionary<char, int> corpusFrequencyData;
         private static Dictionary<string, int> corpusBigramData;
+        public static Dictionary<char, int> publicCorpusFrequencyData { get; private set; }
 
         private static readonly double[,] EffortMatrix = new double[,]
         {
-            { 4.0, 2.0, 2.0, 3.0, 4.0, 5.0, 3.0, 2.0, 2.0, 4.0 },
-            { 1.5, 1.0, 1.0, 1.0, 3.0, 3.0, 1.0, 1.0, 1.0, 1.5 },
-            { 4.0, 4.0, 3.0, 2.0, 5.0, 3.0, 2.0, 3.0, 4.0, 4.0 }
+            { 4.5, 3.0, 3.0, 4.0, 5.0, 6.0, 4.0, 3.0, 3.0, 4.5 },
+            { 1.0, 0.25, 0.25, 0.25, 3.0, 3.0, 0.25, 0.25, 0.25, 1.0 },
+            { 5.5, 5.0, 4.0, 2.0, 5.5, 5.5, 2.0, 4.0, 5.0, 5.5 }
         };
 
         public static void PrecomputeCorpusAnalysis(string corpusContent)
         {
             corpusFrequencyData = AnalyzeCorpusFrequency(corpusContent);
             corpusBigramData = AnalyzeCorpusBigrams(corpusContent);
+            publicCorpusFrequencyData = corpusFrequencyData;
         }
 
         private static Dictionary<char, int> AnalyzeCorpusFrequency(string corpusContent)
         {
             string normalizedContent = corpusContent.RemoveDiacritics();
+            normalizedContent = normalizedContent.ToUpper();
             var frequency = new Dictionary<char, int>();
 
             foreach (char c in normalizedContent)

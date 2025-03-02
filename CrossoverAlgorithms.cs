@@ -24,23 +24,21 @@ namespace KeyboardApp
                 string[][] parent1 = parents[i];
                 string[][] parent2 = parents[i + 1];
 
-                string[][] child1;
-                string[][] child2;
+                string[][] child;
 
                 switch (crossoverType)
                 {
                     case "AEX":
-                        (child1, child2) = ApplyAEX(parent1, parent2);
+                        child = ApplyAEX(parent1, parent2);
                         break;
                     case "PMX":
-                        (child1, child2) = ApplyPMX(parent1, parent2);
+                        child = ApplyPMX(parent1, parent2);
                         break;
                     default:
                         throw new ArgumentException("Invalid crossover method");
                 }
 
-                offspring.Add(child1);
-                offspring.Add(child2);
+                offspring.Add(child);
 
                 logContent.AppendLine($"Parent 1 (Layout {i + 1}):");
                 LogLayout(parent1, logContent);
@@ -48,11 +46,8 @@ namespace KeyboardApp
                 logContent.AppendLine($"Parent 2 (Layout {i + 2}):");
                 LogLayout(parent2, logContent);
 
-                logContent.AppendLine($"Child 1 (from Parent 1, Layout {i + 1}):");
-                LogLayout(child1, logContent);
-
-                logContent.AppendLine($"Child 2 (from Parent 2, Layout {i + 2}):");
-                LogLayout(child2, logContent);
+                logContent.AppendLine($"Child (from layout {i + 1}):");
+                LogLayout(child, logContent);
             }
 
             File.AppendAllText("KeyboardCrossover.log", logContent.ToString());
@@ -60,124 +55,143 @@ namespace KeyboardApp
         }
 
 
-        private static (string[][], string[][]) ApplyAEX(string[][] parent1, string[][] parent2)
+        private static string[][] ApplyAEX(string[][] parent1, string[][] parent2)
         {
-            var flattenedParent1 = parent1.SelectMany(row => row).ToList();
-            var flattenedParent2 = parent2.SelectMany(row => row).ToList();
+            string[][] parents = new string[2][];
+            string[] flatParent1 = parent1.SelectMany(row => row).ToArray();
+            string[] flatParent2 = parent2.SelectMany(row => row).ToArray();
+            parents[0] = flatParent1; parents[1] = flatParent2;
+            int length = flatParent1.Length;
+            string[] child = new string[length];
+            HashSet<string> usedElements = new HashSet<string>(); // Przechowuje już wybrane znaki
+            List<string> availableElements = flatParent1.ToList(); // Elementy, które jeszcze można dodać
 
-            Dictionary<string, HashSet<string>> adjacencyList = new Dictionary<string, HashSet<string>>();
+            // 2. Start od pierwszego elementu `parent1`
+            string currentElement = flatParent1[0];
+            child[0] = currentElement;
+            usedElements.Add(currentElement);
+            availableElements.Remove(currentElement);
 
-            void AddEdge(string key, string neighbor)
+            int counter = 1;
+            int currentParentIndex = 1; // Pierwszy skok do parent2
+
+            while (counter < length)
             {
-                if (!adjacencyList.ContainsKey(key)) adjacencyList[key] = new HashSet<string>();
-                adjacencyList[key].Add(neighbor);
-            }
+                string[] selectedParent = parents[currentParentIndex]; // Pobranie obecnego rodzica
+                currentParentIndex = 1 - currentParentIndex; // Zamiana rodzica na przeciwną wersję
 
-            for (int i = 0; i < flattenedParent1.Count; i++)
-            {
-                string current1 = flattenedParent1[i];
-                string next1 = flattenedParent1[(i + 1) % flattenedParent1.Count];
-                string prev1 = flattenedParent1[(i - 1 + flattenedParent1.Count) % flattenedParent1.Count];
+                int index = Array.IndexOf(selectedParent, currentElement);
+                string nextElement = null;
 
-                string current2 = flattenedParent2[i];
-                string next2 = flattenedParent2[(i + 1) % flattenedParent2.Count];
-                string prev2 = flattenedParent2[(i - 1 + flattenedParent2.Count) % flattenedParent2.Count];
-
-                AddEdge(current1, next1);
-                AddEdge(current1, prev1);
-                AddEdge(current2, next2);
-                AddEdge(current2, prev2);
-            }
-            List<string> GenerateChild()
-            {
-                HashSet<string> used = new HashSet<string>();
-                List<string> child = new List<string>();
-                string current = flattenedParent1[random.Next(flattenedParent1.Count)];
-
-                while (child.Count < flattenedParent1.Count)
+                // Jeśli index istnieje i nie jest na końcu, bierzemy kolejny element
+                if (index != -1 && index < length - 1)
                 {
-                    child.Add(current);
-                    used.Add(current);
+                    nextElement = selectedParent[index + 1];
+                }
 
-                    if (adjacencyList.ContainsKey(current))
+                // Jeśli element już jest w dziecku lub nie istnieje, losujemy inny dostępny element
+                if (nextElement == null || usedElements.Contains(nextElement))
+                {
+                    nextElement = availableElements.OrderBy(_ => Guid.NewGuid()).FirstOrDefault();
+                }
+
+                // Dodanie do dziecka
+                child[counter] = nextElement;
+                usedElements.Add(nextElement);
+                availableElements.Remove(nextElement);
+                currentElement = nextElement;
+                counter++;
+            }
+
+            // 3. Konwersja `string[]` z powrotem do `string[][]`
+            return UnflattenKeyboardLayout(child, parent1.Length, parent1[0].Length);
+        }
+        private static string[][] UnflattenKeyboardLayout(string[] flatLayout, int rows, int cols)
+        {
+            string[][] keyboardLayout = new string[rows][];
+            for (int i = 0; i < rows; i++)
+            {
+                keyboardLayout[i] = flatLayout.Skip(i * cols).Take(cols).ToArray();
+            }
+            return keyboardLayout;
+        }
+        private static string[][] ApplyPMX(string[][] parent1, string[][] parent2)
+        {
+            int rows = parent1.Length;
+            int cols = parent1[0].Length;
+
+            // Spłaszczamy tablice rodziców do jednowymiarowych tablic stringów
+            string[] flatParent1 = parent1.SelectMany(row => row).ToArray();
+            string[] flatParent2 = parent2.SelectMany(row => row).ToArray();
+
+            int parentLength = flatParent1.Length;
+            string[] offspring = new string[parentLength];
+
+            Random random = new Random();
+
+            // Wybór dwóch punktów cięcia
+            int num1, num2;
+            do
+            {
+                num1 = random.Next(parentLength);
+                num2 = random.Next(parentLength);
+            }
+            while (num1 == num2 || Math.Abs(num1 - num2) == parentLength);
+
+            int start = Math.Min(num1, num2);
+            int stop = Math.Max(num1, num2);
+
+            // Tworzymy mapę odwzorowań
+            int cutSize = stop - start;
+            string[] parent1CutPart = new string[cutSize];
+            string[] parent2CutPart = new string[cutSize];
+
+            // Kopiujemy segment z Parent1 do potomka
+            for (int i = 0; i < parentLength; i++)
+            {
+                offspring[i] = flatParent2[i]; // Domyślnie kopiujemy Parent2
+            }
+
+            int k = 0;
+            for (int i = start; i < stop; i++)
+            {
+                offspring[i] = flatParent1[i]; // Wstawiamy segment z Parent1
+
+                parent1CutPart[k] = flatParent1[i];
+                parent2CutPart[k] = flatParent2[i];
+                k++;
+            }
+
+            // Naprawa konfliktów
+            bool flag = true;
+            while (flag)
+            {
+                flag = offspring.Distinct().Count() != offspring.Length;
+
+                for (int i = 0; i < parentLength - cutSize; i++)
+                {
+                    int geneIndex = (stop + i) % parentLength;
+
+                    for (int j = 0; j < cutSize; j++)
                     {
-                        var nextChoices = adjacencyList[current].Where(n => !used.Contains(n)).ToList();
-                        if (nextChoices.Count > 0)
+                        if (parent1CutPart[j] == offspring[geneIndex])
                         {
-                            current = nextChoices[random.Next(nextChoices.Count)];
-                        }
-                        else
-                        {
-                            current = flattenedParent1.FirstOrDefault(k => !used.Contains(k)) ?? flattenedParent1[0];
+                            offspring[geneIndex] = parent2CutPart[j];
                         }
                     }
                 }
-                return child;
             }
 
-            string[][] child1Matrix = ConvertListToMatrix(GenerateChild());
-            string[][] child2Matrix = ConvertListToMatrix(GenerateChild());
-
-            return (child1Matrix, child2Matrix);
-        }
-
-        private static (string[][], string[][]) ApplyPMX(string[][] parent1, string[][] parent2)
-        {
-            var flattenedParent1 = parent1.SelectMany(row => row).ToList();
-            var flattenedParent2 = parent2.SelectMany(row => row).ToList();
-            int length = flattenedParent1.Count;
-
-            List<string> child1 = new List<string>(new string[length]);
-            List<string> child2 = new List<string>(new string[length]);
-
-            Random random = new Random();
-            int start = random.Next(length / 2);
-            int end = random.Next(start, length);
-
-            Dictionary<string, string> mapping1 = new Dictionary<string, string>();
-            Dictionary<string, string> mapping2 = new Dictionary<string, string>();
-
-            for (int i = start; i < end; i++)
+            // Zamiana z powrotem na tablicę 2D
+            string[][] offspring2D = new string[rows][];
+            for (int i = 0; i < rows; i++)
             {
-                child1[i] = flattenedParent2[i];
-                child2[i] = flattenedParent1[i];
-
-                mapping1[flattenedParent2[i]] = flattenedParent1[i];
-                mapping2[flattenedParent1[i]] = flattenedParent2[i];
+                offspring2D[i] = offspring.Skip(i * cols).Take(cols).ToArray();
             }
 
-            FillRemainingPMX(child1, flattenedParent1, mapping1, start, end);
-            FillRemainingPMX(child2, flattenedParent2, mapping2, start, end);
-
-            return (ConvertListToMatrix(child1), ConvertListToMatrix(child2));
+            return offspring2D;
         }
 
-        private static void FillRemainingPMX(List<string> child, List<string> parent, Dictionary<string, string> mapping, int start, int end)
-        {
-            for (int i = 0; i < child.Count; i++)
-            {
-                if (i >= start && i < end) continue;
-
-                string gene = parent[i];
-
-                while (mapping.ContainsKey(gene))
-                {
-                    gene = mapping[gene];
-                }
-
-                child[i] = gene;
-            }
-        }
-
-        private static string[][] ConvertListToMatrix(List<string> list)
-        {
-            return new string[][]
-            {
-                list.Take(10).ToArray(),
-                list.Skip(10).Take(10).ToArray(),
-                list.Skip(20).Take(10).ToArray()
-            };
-        }
 
         private static void LogLayout(string[][] layout, StringBuilder logContent)
         {

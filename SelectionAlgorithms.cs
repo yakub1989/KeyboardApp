@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows;
 
 namespace KeyboardApp
 {
@@ -25,55 +26,89 @@ namespace KeyboardApp
 
             List<string[][]> remainingParents = selectionMethod switch
             {
-                "Tournament" => TournamentSelection(numParents - selectedParents.Count, population),
-                "Roulette" => RouletteWheelSelection(numParents - selectedParents.Count, population),
-                "Ranked" => RankSelection(numParents - selectedParents.Count, population),
-                "Stochastic Universal Sampling" => StochasticUniversalSampling(numParents - selectedParents.Count, population),
+                "Tournament" => TournamentSelection(numParents, population),
+                "Roulette" => RouletteWheelSelection(numParents, population),
+                "Ranked" => RankSelection(numParents, population),
+                "Stochastic Universal Sampling" => StochasticUniversalSampling(numParents, population),
                 _ => throw new ArgumentException("Invalid selection method.")
             };
+
 
             selectedParents.AddRange(remainingParents);
             return selectedParents;
         }
 
-        private static List<string[][]> TournamentSelection(int tournamentSize, List<string[][]> population)
+        private static List<string[][]> TournamentSelection(int numParents, List<string[][]> population)
         {
             if (population.Count == 0)
                 throw new InvalidOperationException("No population available for selection.");
-            if (tournamentSize <= 0)
-                throw new ArgumentException("Tournament size must be greater than zero.");
-            if (tournamentSize > population.Count)
-                tournamentSize = population.Count;
+            if (numParents <= 0)
+                throw new ArgumentException("Number of parents must be greater than zero.");
 
             Random random = new Random();
             List<string[][]> selectedParents = new List<string[][]>();
+
+            // Zwiększamy liczbę turniejów do większej części populacji
+            int numTournaments = Math.Max(population.Count / 2, numParents);
+            int tournamentSize = Math.Max(4, numParents / 3);
+
+            var availablePopulation = new List<string[][]>(population); // Kopia populacji
 
             StringBuilder logContent = new StringBuilder();
             logContent.AppendLine($"Tournament Selection Debug Log - {DateTime.Now}");
             logContent.AppendLine($"Tournament Size: {tournamentSize}");
             logContent.AppendLine($"Population Count: {population.Count}");
-            logContent.AppendLine($"Total Tournaments: {population.Count / tournamentSize}");
+            logContent.AppendLine($"Total Tournaments: {numTournaments}");
             logContent.AppendLine("===================================");
 
-            for (int i = 0; i < population.Count / tournamentSize; i++)
+            while (selectedParents.Count < numParents)
             {
-                var tournamentGroup = population.OrderBy(_ => random.Next()).Take(tournamentSize).ToList();
-                logContent.AppendLine($"\nTournament {i + 1}: {tournamentGroup.Count} Participants");
+                if (availablePopulation.Count < tournamentSize) // Odbudowa puli populacji
+                    availablePopulation = new List<string[][]>(population);
 
+                // Losowanie uczestników
+                var shuffledPopulation = availablePopulation.OrderBy(_ => Guid.NewGuid()).ToList();
+                var tournamentGroup = shuffledPopulation.Take(tournamentSize).ToList();
+
+                logContent.AppendLine($"\nTournament {selectedParents.Count + 1}: {tournamentGroup.Count} Participants");
+
+                // Ocena fitness i wybór najlepszego z możliwym 20% losowym wyborem drugiego
                 var fitnessValues = tournamentGroup.ToDictionary(
                     layout => layout,
                     layout => EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder())
                 );
 
-                var bestLayout = fitnessValues.OrderBy(kv => kv.Value).First().Key;
+                logContent.AppendLine("Tournament Participants Fitness:");
+                foreach (var kv in fitnessValues)
+                {
+                    logContent.AppendLine($"Fitness: {kv.Value:F4}");
+                }
+
+                var sortedGroup = fitnessValues.OrderBy(kv => kv.Value).ToList();
+                var bestLayout = sortedGroup.First().Key;
+
+                // 80% wybieramy najlepszy, 20% drugi najlepszy
+                if (random.NextDouble() < 0.2 && sortedGroup.Count > 1)
+                {
+                    bestLayout = sortedGroup[1].Key;
+                }
+
                 selectedParents.Add(bestLayout);
-                logContent.AppendLine("Best Layout:");
+                availablePopulation.Remove(bestLayout); // Usuwamy wybranego osobnika
+
+                logContent.AppendLine("Best Layout Selected:");
                 LogLayout(bestLayout, logContent);
             }
 
-            File.WriteAllText(logFilePath, logContent.ToString());
+            File.AppendAllText(logFilePath, logContent.ToString());
             return selectedParents;
         }
+
+
+
+
+
+
 
         private static List<string[][]> RouletteWheelSelection(int numParents, List<string[][]> population)
         {
@@ -93,7 +128,7 @@ namespace KeyboardApp
             double totalFitness = fitnessValues.Values.Sum();
             List<string[][]> selectedParents = new List<string[][]>();
 
-            for (int i = 0; i < numParents; i++)
+            for (int i = 0; i <= numParents; i++)
             {
                 double spin = random.NextDouble() * totalFitness;
                 double cumulative = 0;
