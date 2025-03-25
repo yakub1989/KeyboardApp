@@ -3,12 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Windows;
 
 namespace KeyboardApp
 {
     public class CrossoverAlgorithms
     {
         private static Random random = new Random();
+        private const double PROB_DISTANT_SWAP = 0.3;  // 30% chance for distant swap
+        private const double PROB_ADAPTIVE_BOOST = 0.2; // 20% chance to increase randomness
+        private const double PROBABILITY_INCREMENT = 0.1; // Increment when stagnation occurs
+
 
         public static List<string[][]> ApplyCrossover(List<string[][]> parents, string crossoverType)
         {
@@ -53,57 +58,63 @@ namespace KeyboardApp
             File.AppendAllText("KeyboardCrossover.log", logContent.ToString());
             return offspring;
         }
-
-
         private static string[][] ApplyAEX(string[][] parent1, string[][] parent2)
         {
-            string[][] parents = new string[2][];
+            StringBuilder logContent = new StringBuilder();
             string[] flatParent1 = parent1.SelectMany(row => row).ToArray();
             string[] flatParent2 = parent2.SelectMany(row => row).ToArray();
-            parents[0] = flatParent1; parents[1] = flatParent2;
             int length = flatParent1.Length;
             string[] child = new string[length];
-            HashSet<string> usedElements = new HashSet<string>(); // Przechowuje już wybrane znaki
-            List<string> availableElements = flatParent1.ToList(); // Elementy, które jeszcze można dodać
+            HashSet<string> usedElements = new HashSet<string>();
+            List<string> availableElements = flatParent1.ToList();
 
-            // 2. Start od pierwszego elementu `parent1`
             string currentElement = flatParent1[0];
             child[0] = currentElement;
             usedElements.Add(currentElement);
             availableElements.Remove(currentElement);
 
             int counter = 1;
-            int currentParentIndex = 1; // Pierwszy skok do parent2
+            int currentParentIndex = 1;
 
             while (counter < length)
             {
-                string[] selectedParent = parents[currentParentIndex]; // Pobranie obecnego rodzica
-                currentParentIndex = 1 - currentParentIndex; // Zamiana rodzica na przeciwną wersję
+                string[] selectedParent = (currentParentIndex == 0) ? flatParent1 : flatParent2;
+                currentParentIndex = 1 - currentParentIndex;
 
                 int index = Array.IndexOf(selectedParent, currentElement);
                 string nextElement = null;
 
-                // Jeśli index istnieje i nie jest na końcu, bierzemy kolejny element
                 if (index != -1 && index < length - 1)
                 {
                     nextElement = selectedParent[index + 1];
                 }
 
-                // Jeśli element już jest w dziecku lub nie istnieje, losujemy inny dostępny element
                 if (nextElement == null || usedElements.Contains(nextElement))
                 {
-                    nextElement = availableElements.OrderBy(_ => Guid.NewGuid()).FirstOrDefault();
+                    double probability = PROB_DISTANT_SWAP;
+                    if (random.NextDouble() < 0.2) probability += PROB_ADAPTIVE_BOOST; // Adaptive boost
+
+                    if (random.NextDouble() < probability)
+                    {
+                        int randomIndex = random.Next(0, availableElements.Count);
+                        nextElement = availableElements[randomIndex];
+                        logContent.AppendLine($"[RANDOMIZED] Selected {nextElement} instead of adjacency-based swap.");
+                    }
+                    else
+                    {
+                        nextElement = availableElements.OrderBy(_ => Guid.NewGuid()).FirstOrDefault();
+                    }
                 }
 
-                // Dodanie do dziecka
                 child[counter] = nextElement;
                 usedElements.Add(nextElement);
                 availableElements.Remove(nextElement);
                 currentElement = nextElement;
                 counter++;
+
+                logContent.AppendLine($"Step {counter}: Placed {nextElement} at position {counter - 1}");
             }
 
-            // 3. Konwersja `string[]` z powrotem do `string[][]`
             return UnflattenKeyboardLayout(child, parent1.Length, parent1[0].Length);
         }
         private static string[][] UnflattenKeyboardLayout(string[] flatLayout, int rows, int cols)

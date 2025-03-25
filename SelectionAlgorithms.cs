@@ -13,17 +13,7 @@ namespace KeyboardApp
 
         public static List<string[][]> SelectParents(string selectionMethod, int numParents, List<string[][]> population)
         {
-            int elitismCount = SettingsWindow.ElitismCount;
             List<string[][]> selectedParents = new List<string[][]>();
-
-            if (elitismCount > 0)
-            {
-                selectedParents = population
-                    .OrderBy(layout => EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder()))
-                    .Take(elitismCount)
-                    .ToList();
-            }
-
             List<string[][]> remainingParents = selectionMethod switch
             {
                 "Tournament" => TournamentSelection(numParents, population),
@@ -159,6 +149,7 @@ namespace KeyboardApp
             logContent.AppendLine("\nRank Selection Results");
             logContent.AppendLine("=======================");
 
+            // Posortowanie układów według fitnessu
             var rankedLayouts = population
                 .OrderBy(layout => EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder()))
                 .ToList();
@@ -168,16 +159,37 @@ namespace KeyboardApp
                 .Select((layout, index) => new { Layout = layout, Probability = (double)(rankedLayouts.Count - index) / totalRank })
                 .ToDictionary(x => x.Layout, x => x.Probability);
 
-            List<string[][]> selectedParents = SelectByProbability(numParents, rankProbabilities);
-            foreach (var parent in selectedParents)
+            List<string[][]> selectedParents = new List<string[][]>();
+
+            Random random = new Random();
+            while (selectedParents.Count < numParents)
             {
-                logContent.AppendLine($"\nSelected Layout:");
-                LogLayout(parent, logContent);
+                // Wybór układu na podstawie prawdopodobieństw
+                double roll = random.NextDouble();
+                double cumulative = 0;
+
+                foreach (var kv in rankProbabilities.OrderByDescending(kv => kv.Value))
+                {
+                    cumulative += kv.Value;
+                    if (roll < cumulative)
+                    {
+                        selectedParents.Add(kv.Key);
+                        rankProbabilities.Remove(kv.Key);  // Usuwamy wybrany układ z listy
+
+                        // Po usunięciu z listy, należy także usunąć go z rankedLayouts
+                        rankedLayouts.Remove(kv.Key);
+
+                        logContent.AppendLine($"\nSelected Layout:");
+                        LogLayout(kv.Key, logContent);
+                        break;
+                    }
+                }
             }
 
             File.AppendAllText(logFilePath, logContent.ToString());
             return selectedParents;
         }
+
 
         private static List<string[][]> StochasticUniversalSampling(int numParents, List<string[][]> population)
         {

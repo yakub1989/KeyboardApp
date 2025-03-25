@@ -2,6 +2,7 @@
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace KeyboardApp
 {
@@ -17,6 +18,19 @@ namespace KeyboardApp
             InitializeComponent();
             var settingsWindow = new SettingsWindow();
             settingsWindow.Close();
+        }
+        private void LockKey(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button)
+            {
+                if (button.Background == Brushes.Yellow)
+                {
+                    button.ClearValue(BackgroundProperty);
+                } else
+                {
+                    button.Background = Brushes.Yellow;
+                }
+            }
         }
 
         private void OnKeyClick(object sender, RoutedEventArgs e)
@@ -79,6 +93,7 @@ namespace KeyboardApp
                 if (button != null && i < defaultLayout.Length)
                 {
                     button.Content = defaultLayout[i];
+                    button.ClearValue(BackgroundProperty);
                 }
             }
         }
@@ -258,7 +273,6 @@ namespace KeyboardApp
             logContent.AppendLine("          OPTIMIZATION PROCESS         ");
             logContent.AppendLine("=======================================\n");
 
-            // 🔹 Logowanie analizy korpusu (znaki i ich częstotliwości)
             logContent.AppendLine("Corpus Character Frequencies:");
             logContent.AppendLine("---------------------------------------");
 
@@ -267,7 +281,7 @@ namespace KeyboardApp
                 logContent.AppendLine($"Character: '{entry.Key}'  |  Frequency: {entry.Value}");
             }
 
-            File.WriteAllText("CorpusAnalysis.log", logContent.ToString()); // Logowanie do osobnego pliku
+            File.WriteAllText("CorpusAnalysis.log", logContent.ToString());
 
             UpdateProgress("Corpus analysis completed.");
 
@@ -278,8 +292,6 @@ namespace KeyboardApp
             {
                 logContent.AppendLine($"\nGENERATION {generation + 1}");
                 logContent.AppendLine("---------------------------------------");
-
-                //UpdateProgress($"Generation {generation + 1}: Evaluating layouts...");
 
                 var populationEffort = GenerationAlgorithms.KeyboardPopulation
                     .Select(layout => (layout, effort: EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder())))
@@ -296,23 +308,16 @@ namespace KeyboardApp
                 LogLayout(populationEffort.First().layout, logContent);
 
                 UpdateProgress($"Generation {generation + 1}   Best effort {populationEffort[0].effort}");
-                List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
-
-                //UpdateProgress($"Generation {generation + 1}: Performing crossover...");
-                List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
-
-                //UpdateProgress($"Generation {generation + 1}: Applying mutation...");
-                offspring = MutationAlgorithms.ApplyMutation(offspring, mutationRate, selectedMutation);
-
-                //UpdateProgress($"Generation {generation + 1}: Creating new population...");
                 List<string[][]> nextGeneration = new List<string[][]>();
-
                 if (elitismCount > 0)
                 {
                     var elites = populationEffort.Take(elitismCount).Select(x => x.layout).ToList();
                     nextGeneration.AddRange(elites);
                 }
+                List<string[][]> selectedParents = SelectionAlgorithms.SelectParents(selectedAlgorithm, numParentsSelected, GenerationAlgorithms.KeyboardPopulation);
+                List<string[][]> offspring = CrossoverAlgorithms.ApplyCrossover(selectedParents, selectedCrossover);
                 nextGeneration.AddRange(offspring);
+                offspring.AddRange(MutationAlgorithms.ApplyMutation(nextGeneration, mutationRate, selectedMutation));
 
                 while (nextGeneration.Count < populationSize)
                 {
