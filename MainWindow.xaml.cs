@@ -316,7 +316,7 @@ namespace KeyboardApp
             bool buttonLock = SettingsWindow.IsButtonLockEnabled;
             EvaluationAlgorithm.ClearCache();
             string[][] LockedButtons = GetButtonMatrix();
-            DisplayButtonMatrix(LockedButtons);
+            //DisplayButtonMatrix(LockedButtons);
             
             if (!File.Exists(corpusFilePath))
             {
