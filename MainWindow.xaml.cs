@@ -32,6 +32,63 @@ namespace KeyboardApp
                 }
             }
         }
+        private string[][] GetButtonMatrix()
+        {
+            int[][] ranges = new int[][]
+            {
+        new int[] { 28, 37 },
+        new int[] { 42, 51 },
+        new int[] { 55, 64 }
+            };
+            string[][] buttonMatrix = new string[ranges.Length][];
+
+            for (int row = 0; row < ranges.Length; row++)
+            {
+                int start = ranges[row][0];
+                int end = ranges[row][1];
+
+                var rowContents = new List<string>();
+
+                for (int i = start; i <= end; i++)
+                {
+                    string buttonName = $"btn_{i:D2}";
+                    var button = FindName(buttonName) as Button;
+
+                    if (button != null)
+                    {
+                        if (button.Background == Brushes.Yellow)
+                        {
+                            rowContents.Add(button.Content.ToString());
+                        }
+                        else
+                        {
+                            rowContents.Add("0");
+                        }
+                    }
+                    else
+                    {
+                        rowContents.Add("0");
+                    }
+                }
+                buttonMatrix[row] = rowContents.ToArray();
+            }
+
+            return buttonMatrix;
+        }
+        public void DisplayButtonMatrix(string[][] buttonMatrix)
+        {
+            StringBuilder matrixText = new StringBuilder();
+
+            for (int row = 0; row < buttonMatrix.Length; row++)
+            {
+                for (int col = 0; col < buttonMatrix[row].Length; col++)
+                {
+                    matrixText.Append(buttonMatrix[row][col] + " ");
+                }
+                matrixText.AppendLine();
+            }
+            MessageBox.Show(matrixText.ToString(), "Button Matrix");
+        }
 
         private void OnKeyClick(object sender, RoutedEventArgs e)
         {
@@ -256,9 +313,11 @@ namespace KeyboardApp
             string selectedCrossover = SettingsWindow.SelectedCrossoverMethod;
             int elitismCount = SettingsWindow.ElitismCount;
             string corpusFilePath = SettingsWindow.SelectedCorpusFilePath;
+            bool buttonLock = SettingsWindow.IsButtonLockEnabled;
             EvaluationAlgorithm.ClearCache();
-
-            // 🔹 Sprawdzenie, czy plik korpusu istnieje
+            string[][] LockedButtons = GetButtonMatrix();
+            DisplayButtonMatrix(LockedButtons);
+            
             if (!File.Exists(corpusFilePath))
             {
                 MessageBox.Show("Corpus file not found. Please select a valid corpus in settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -292,11 +351,20 @@ namespace KeyboardApp
             {
                 logContent.AppendLine($"\nGENERATION {generation + 1}");
                 logContent.AppendLine("---------------------------------------");
-
+                if (buttonLock)
+                {
+                    for (int i = 0; i < GenerationAlgorithms.KeyboardPopulation.Count; i++)
+                    {
+                        //DisplayButtonMatrix(GenerationAlgorithms.KeyboardPopulation[i]);
+                        GenerationAlgorithms.KeyboardPopulation[i] = GenerationAlgorithms.AdjustLayoutToLockedKeys(GenerationAlgorithms.KeyboardPopulation[i], LockedButtons);
+                        //DisplayButtonMatrix(GenerationAlgorithms.KeyboardPopulation[i]);
+                    }
+                }
                 var populationEffort = GenerationAlgorithms.KeyboardPopulation
                     .Select(layout => (layout, effort: EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder())))
                     .OrderBy(x => x.effort)
                     .ToList();
+
 
                 for (int i = 0; i < populationEffort.Count; i++)
                 {
@@ -326,12 +394,19 @@ namespace KeyboardApp
 
                 GenerationAlgorithms.KeyboardPopulation = nextGeneration;
             }
-
+            if (buttonLock)
+            {
+                for (int i = 0; i < GenerationAlgorithms.KeyboardPopulation.Count; i++)
+                {
+                    //DisplayButtonMatrix(GenerationAlgorithms.KeyboardPopulation[i]);
+                    GenerationAlgorithms.KeyboardPopulation[i] = GenerationAlgorithms.AdjustLayoutToLockedKeys(GenerationAlgorithms.KeyboardPopulation[i], LockedButtons);
+                    //DisplayButtonMatrix(GenerationAlgorithms.KeyboardPopulation[i]);
+                }
+            }
             UpdateProgress("Finalizing best layout...");
             var finalBestLayout = GenerationAlgorithms.KeyboardPopulation
                 .OrderBy(layout => EvaluationAlgorithm.EvaluateKeyboardEffort(layout, new StringBuilder()))
                 .First();
-
             logContent.AppendLine("\n=======================================");
             logContent.AppendLine("FINAL BEST LAYOUT:");
             logContent.AppendLine("=======================================");

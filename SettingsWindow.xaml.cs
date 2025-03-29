@@ -18,6 +18,7 @@ namespace KeyboardApp
         public static bool IsDistanceMetricEnabled { get; private set; }
         public static bool IsHandBalanceMetricEnabled { get; private set; }
         public static bool IsRowSwitchMetricEnabled { get; private set; }
+        public static bool IsButtonLockEnabled { get; private set; }
         public static string SelectedOptimizationPattern { get; private set; }
         public static string SelectedAlgorithm { get; private set; }
         public static string SelectedMutationMethod { get; private set; }
@@ -27,6 +28,7 @@ namespace KeyboardApp
         public static int ElitismCount { get; private set; }
         public static double MutationRate { get; private set; }
         public static int NumParentsSelected { get; set; }
+        
 
         public static string CorpusContent
         {
@@ -78,6 +80,7 @@ namespace KeyboardApp
             SelectedAlgorithm = ConfigurationManager.AppSettings["SelectedAlgorithm"] ?? "Roulette";
             SelectedMutationMethod = ConfigurationManager.AppSettings["SelectedMutationMethod"] ?? "Reverse Sequence Mutation";
             SelectedCrossoverMethod = ConfigurationManager.AppSettings["SelectedCrossoverMethod"] ?? "Placeholder";
+            IsButtonLockEnabled = bool.Parse(ConfigurationManager.AppSettings["IsButtonLockEnabled"] ?? "false");
 
             GenerationCount = int.Parse(ConfigurationManager.AppSettings["GenerationCount"] ?? "100");
             PopulationSize = int.Parse(ConfigurationManager.AppSettings["PopulationSize"] ?? "50");
@@ -85,6 +88,7 @@ namespace KeyboardApp
             MutationRate = double.TryParse(ConfigurationManager.AppSettings["MutationRate"], NumberStyles.Float, CultureInfo.InvariantCulture, out double mutation) ? mutation : 0.02;
             NumParentsSelected = int.TryParse(ConfigurationManager.AppSettings["NumParentsSelected"], out int tSize) ? tSize : 3;
 
+            chkButtonLock.IsChecked = IsButtonLockEnabled;
             cmbCorpusList.SelectedItem = Path.GetFileName(SelectedCorpusFilePath);
             chkDistanceMetric.IsChecked = IsDistanceMetricEnabled;
             chkHandBalanceMetric.IsChecked = IsHandBalanceMetricEnabled;
@@ -135,6 +139,7 @@ namespace KeyboardApp
             IsDistanceMetricEnabled = chkDistanceMetric.IsChecked == true;
             IsHandBalanceMetricEnabled = chkHandBalanceMetric.IsChecked == true;
             IsRowSwitchMetricEnabled = chkRowSwitchMetric.IsChecked == true;
+            IsButtonLockEnabled = chkButtonLock.IsChecked == true;
 
             SelectedOptimizationPattern = ((ComboBoxItem)cmbOptimizationPattern.SelectedItem)?.Content?.ToString();
             SelectedAlgorithm = ((ComboBoxItem)cmbAlgorithm.SelectedItem)?.Content?.ToString();
@@ -162,6 +167,7 @@ namespace KeyboardApp
             UpdateConfigValue(config, "ElitismCount", ElitismCount.ToString());
             UpdateConfigValue(config, "MutationRate", MutationRate.ToString(CultureInfo.InvariantCulture));
             UpdateConfigValue(config, "NumParentsSelected", NumParentsSelected.ToString());
+            UpdateConfigValue(config, "IsButtonLockEnabled", IsButtonLockEnabled.ToString());
 
             config.Save(ConfigurationSaveMode.Modified);
             ConfigurationManager.RefreshSection("appSettings");
