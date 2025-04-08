@@ -45,6 +45,13 @@ namespace KeyboardApp
                 {
                     // Task został anulowany - zamknięcie okna
                 }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        MessageBox.Show(ex.Message);
+                    });
+                }
             });
         }
 

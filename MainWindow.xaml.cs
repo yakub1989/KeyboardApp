@@ -97,11 +97,84 @@ namespace KeyboardApp
                 var editWindow = new EditKeyWindow();
                 if (editWindow.ShowDialog() == true)
                 {
-                    button.Content = editWindow.PressedKey;
+                    string newKey = editWindow.PressedKey.ToUpper();
+                    string oldKey = button.Content.ToString().ToUpper();
+                    if (oldKey != newKey)
+                    {
+                        SwapKeysInLayout(oldKey, newKey);
+                    }
+                    button.Content = newKey;
                 }
             }
         }
+        private void SwapKeysInLayout(string oldKey, string newKey)
+        {
+            int[][] ranges = new int[][]
+            {
+                new int[] { 28, 37 },
+                new int[] { 42, 51 },
+                new int[] { 55, 64 }
+            };
+            string[][] buttonMatrix = new string[ranges.Length][];
+            for (int row = 0; row < ranges.Length; row++)
+            {
+                int start = ranges[row][0];
+                int end = ranges[row][1];
 
+                var rowContents = new List<string>();
+
+                for (int i = start; i <= end; i++)
+                {
+                    string buttonName = $"btn_{i:D2}";
+                    var button = FindName(buttonName) as Button;
+
+                    if (button != null)
+                    {
+                        rowContents.Add(button.Content.ToString());
+                    }
+                    else
+                    {
+                        rowContents.Add("0");
+                    }
+                }
+                buttonMatrix[row] = rowContents.ToArray();
+            }
+            (int oldRow, int oldCol) = (-1, -1);
+            (int newRow, int newCol) = (-1, -1);
+            oldKey = oldKey.ToUpper();
+            newKey = newKey.ToUpper();
+            for (int row = 0; row < buttonMatrix.Length; row++)
+            {
+                for (int col = 0; col < buttonMatrix[row].Length; col++)
+                {
+                    string currentKey = buttonMatrix[row][col].ToUpper();
+                    if (currentKey == oldKey)
+                    {
+                        oldRow = row;
+                        oldCol = col;
+                    }
+                    else if (currentKey == newKey)
+                    {
+                        newRow = row;
+                        newCol = col;
+                    }
+                }
+            }
+            if (oldRow != -1 && newRow != -1)
+            {
+                string temp = buttonMatrix[oldRow][oldCol];
+                buttonMatrix[oldRow][oldCol] = buttonMatrix[newRow][newCol];
+                buttonMatrix[newRow][newCol] = temp;
+                string buttonName1 = $"btn_{ranges[oldRow][0] + oldCol:D2}";
+                string buttonName2 = $"btn_{ranges[newRow][0] + newCol:D2}";
+                var button1 = FindName(buttonName1) as Button;
+                var button2 = FindName(buttonName2) as Button;
+                if (button1 != null)
+                {button1.Content = buttonMatrix[oldRow][oldCol];}
+                if (button2 != null)
+                {button2.Content = buttonMatrix[newRow][newCol];}
+            }
+        }
         private bool CheckForDuplicates()
         {
             var buttonContents = GetSpecificButtonContents();
@@ -332,12 +405,14 @@ namespace KeyboardApp
             logContent.AppendLine("          OPTIMIZATION PROCESS         ");
             logContent.AppendLine("=======================================\n");
 
-            logContent.AppendLine("Corpus Character Frequencies:");
+            logContent.AppendLine("Corpus Character Occurences:");
             logContent.AppendLine("---------------------------------------");
 
+            double totalCharacters = EvaluationAlgorithm.publicCorpusFrequencyData.Values.Sum();
             foreach (var entry in EvaluationAlgorithm.publicCorpusFrequencyData.OrderByDescending(x => x.Value))
             {
-                logContent.AppendLine($"Character: '{entry.Key}'  |  Frequency: {entry.Value}");
+                double percentage = (entry.Value / totalCharacters) * 100;
+                logContent.AppendLine($"Character: '{entry.Key}'  |  Occurences: {entry.Value} | Percentage: {percentage}%");
             }
 
             File.WriteAllText("CorpusAnalysis.log", logContent.ToString());
