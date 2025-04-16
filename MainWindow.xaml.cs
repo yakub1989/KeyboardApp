@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using Microsoft.Win32;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,6 +32,101 @@ namespace KeyboardApp
                     button.Background = Brushes.Yellow;
                 }
             }
+        }
+        private void ExportLayoutToPKL(object sender, RoutedEventArgs e)
+        {
+           
+        }
+        public void GenerateLayoutFile(string[][] keyboardLayout)
+        {
+            // Uruchomienie dialogu "Zapisz jako"
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "INI Files (*.ini)|*.ini|All Files (*.*)|*.*",  // Ustawienie filtru dla plików .ini
+                DefaultExt = "ini"  // Domyślne rozszerzenie pliku
+            };
+
+            // Jeśli użytkownik wybrał plik
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                string filePath = saveFileDialog.FileName;
+
+                // Tworzenie pliku
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Nagłówek
+                    writer.WriteLine(";");
+                    writer.WriteLine("; Keyboard Layout definition for");
+                    writer.WriteLine("; Portable Keyboard Layout ");
+                    writer.WriteLine("; http://pkl.sourceforge.net");
+                    writer.WriteLine(";");
+                    writer.WriteLine();
+                    writer.WriteLine("[informations]");
+                    writer.WriteLine("layoutname           = QWERTY-PL");
+                    writer.WriteLine("layoutcode           = QWERTY-PL");
+                    writer.WriteLine("localeid             = 00000415");  // Polski język
+                    writer.WriteLine("copyright            = Jakub Jonderko");
+                    writer.WriteLine("company              = ");
+                    writer.WriteLine("homepage             = ");
+                    writer.WriteLine("version              = 1.0");
+                    writer.WriteLine();
+                    writer.WriteLine("generated_at         = " + DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy"));
+                    writer.WriteLine("generated_from       = KeyboardLayoutOptimizer");
+                    writer.WriteLine("modified_after_generate = yes");
+                    writer.WriteLine();
+                    writer.WriteLine("[global]");
+                    writer.WriteLine("shiftstates = 0:1:2:6:7");
+                    writer.WriteLine("img_width = 296");
+                    writer.WriteLine("img_height = 102");
+                    writer.WriteLine();
+                    writer.WriteLine("[fingers]");
+                    writer.WriteLine("row1 = 1123445567888");
+                    writer.WriteLine("row2 = 1123445567888");
+                    writer.WriteLine("row3 = 1123445567888");
+                    writer.WriteLine("row4 = 11234455678");
+                    writer.WriteLine();
+
+                    // Sekcja layout - generowanie przypisań klawiszy
+                    writer.WriteLine("[layout]");
+
+                    // Zaczynamy od SC002
+                    int scanCode = 0x002;
+
+                    // Iterowanie po przekazanym układzie klawiatury i generowanie odpowiednich linii
+                    for (int row = 0; row < keyboardLayout.Length; row++)
+                    {
+                        for (int col = 0; col < keyboardLayout[row].Length; col++)
+                        {
+                            string key = keyboardLayout[row][col];
+
+                            // Generowanie przypisań
+                            writer.WriteLine($"SC{scanCode:X3} = {key.ToUpper()}	{key.ToLower()}	{key.ToUpper()}	--	{key.ToLower()}	{key.ToUpper()}	; {key}");
+                            scanCode++;  // Przechodzimy do kolejnego kodu skanera
+                        }
+                    }
+
+                    MessageBox.Show("Plik został zapisany do: " + filePath);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nie wybrano pliku do zapisania.");
+            }
+        }
+        private void ShowHelp(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("PROGRAM HELP\n\n" +
+                "You can design your own keyboard layout manually by swapping and assigning" +
+                " keys to specific positions on the main screen. Then, using the \"Export to PKL\" key" +
+                ", you can turn it into an .ini file for the PKL program. \n" +
+                "By right clicking a button, you can lock it in place - this will ensure, " +
+                "that during the layout generation process, that key will remain static " +
+                "and not be changed.\n\n" +
+                "By clicking \"Evaluate layout\", you can manually evaluate your current " +
+                "layout on the main screen. \n\n" +
+                "The generation options allow a wide variety of algorithms and metrics to" +
+                " further personalize the process and promote chosen style of a keyboard.\n" +
+                "\nJakub Jonderko, 2025");
         }
         private string[][] GetButtonMatrix()
         {
