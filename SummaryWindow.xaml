@@ -1,0 +1,104 @@
+<Window x:Class="KeyboardApp.SummaryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Generation Summary" Height="500" Width="450">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />  <!-- Tytuł -->
+            <RowDefinition Height="*" />    <!-- Przewijalna sekcja ustawień -->
+            <RowDefinition Height="Auto" /> <!-- Przycisk zamknięcia -->
+        </Grid.RowDefinitions>
+
+        <!-- Tytuł okna podsumowania -->
+        <TextBlock Text="Generation Summary" 
+                   FontSize="32" 
+                   FontWeight="Bold" 
+                   HorizontalAlignment="Center" 
+                   VerticalAlignment="Top" 
+                   Margin="0,20,0,0" Grid.Row="0" />
+
+        <!-- Przewijalna sekcja ustawień -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel VerticalAlignment="Top" HorizontalAlignment="Stretch">
+
+                    <!-- Corpus File Section -->
+                    <TextBlock Text="Corpus File" FontWeight="Bold" Margin="0,10,0,5" />
+                    <TextBlock x:Name="CorpusTextBlock" HorizontalAlignment="Stretch" Margin="0,0,0,10"/>
+
+                    <!-- Evaluation Metrics Section -->
+                    <TextBlock Text="Evaluation Metrics" FontWeight="Bold" Margin="0,10,0,5" />
+                    <StackPanel Orientation="Vertical" Margin="0,0,0,10">
+                        <TextBlock Text="Distance Metric: " />
+                        <TextBlock x:Name="DistanceMetricTextBlock" />
+                        
+                        <TextBlock Text="Hand Balance Metric: " />
+                        <TextBlock x:Name="HandBalanceMetricTextBlock" />
+                        
+                        <TextBlock Text="Row Switch Metric: " />
+                        <TextBlock x:Name="RowSwitchMetricTextBlock" />
+                    </StackPanel>
+
+                    <!-- Typing Style Preference Section -->
+                    <TextBlock Text="Typing Style Preference" FontWeight="Bold" Margin="0,10,0,5" />
+                    <TextBlock x:Name="TypingStylePreferenceTextBlock" HorizontalAlignment="Stretch" Margin="0,0,0,10" />
+
+                    <!-- Genetic Algorithm Configuration Section -->
+                    <TextBlock Text="Genetic Algorithm Configuration" FontWeight="Bold" Margin="0,10,0,5" />
+                    <StackPanel Orientation="Vertical" Margin="0,0,0,10">
+                        <TextBlock Text="Generation Count: " />
+                        <TextBlock x:Name="GenerationCountTextBlock" />
+                        
+                        <TextBlock Text="Population Size: " />
+                        <TextBlock x:Name="PopulationSizeTextBlock" />
+                        
+                        <TextBlock Text="Elitism Count: " />
+                        <TextBlock x:Name="ElitismCountTextBlock" />
+                        
+                        <TextBlock Text="Mutation Rate: " />
+                        <TextBlock x:Name="MutationRateTextBlock" />
+                        
+                        <TextBlock Text="Selection Method: " />
+                        <TextBlock x:Name="SelectionMethodTextBlock" />
+                        
+                        <TextBlock Text="Parents Selected: " />
+                        <TextBlock x:Name="ParentsSelectedTextBlock" />
+                        
+                        <TextBlock Text="Mutation: " />
+                        <TextBlock x:Name="MutationTextBlock" />
+                        
+                        <TextBlock Text="Crossover: " />
+                        <TextBlock x:Name="CrossoverTextBlock" />
+                    </StackPanel>
+
+                    <!-- Button Locking Section -->
+                    <TextBlock Text="Button Locking" FontWeight="Bold" Margin="0,10,0,5" />
+                    <TextBlock x:Name="ButtonLockingTextBlock" HorizontalAlignment="Stretch" Margin="0,0,0,10" />
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Przyciski "Open log file", "View effort graph", i "Close" -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <!-- Open log file Button -->
+            <Button Content="Open log file" Width="120" Height="30" Margin="0,0,10,0" Click="OpenLogFile" />
+            <!-- View effort graph Button -->
+            <Button Content="View effort graph" Width="160" Height="30" Margin="0,0,10,0" Click="ViewEffortGraph" />
+            <!-- Close Button -->
+            <Button Content="Close" Width="100" Height="30" Click="CloseWindow"/>
+        </StackPanel>
+    </Grid>
+</Window>

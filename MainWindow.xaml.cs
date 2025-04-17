@@ -35,7 +35,37 @@ namespace KeyboardApp
         }
         private void ExportLayoutToPKL(object sender, RoutedEventArgs e)
         {
-           
+            int[][] ranges = new int[][]
+           {
+                new int[] { 28, 37 },
+                new int[] { 42, 51 },
+                new int[] { 55, 64 }
+           };
+            string[][] buttonMatrix = new string[ranges.Length][];
+            for (int row = 0; row < ranges.Length; row++)
+            {
+                int start = ranges[row][0];
+                int end = ranges[row][1];
+
+                var rowContents = new List<string>();
+
+                for (int i = start; i <= end; i++)
+                {
+                    string buttonName = $"btn_{i:D2}";
+                    var button = FindName(buttonName) as Button;
+
+                    if (button != null)
+                    {
+                        rowContents.Add(button.Content.ToString());
+                    }
+                    else
+                    {
+                        rowContents.Add("0");
+                    }
+                }
+                buttonMatrix[row] = rowContents.ToArray();
+            }
+            GenerateLayoutFile(buttonMatrix);
         }
         public void GenerateLayoutFile(string[][] keyboardLayout)
         {
@@ -89,18 +119,43 @@ namespace KeyboardApp
                     // Sekcja layout - generowanie przypisań klawiszy
                     writer.WriteLine("[layout]");
 
-                    // Zaczynamy od SC002
-                    int scanCode = 0x002;
+                    // Sztywne przypisanie dla SC002 do SC00d
+                    writer.WriteLine("SC002 = 1	0	1	1	--	!	¡	¹	; 1");
+                    writer.WriteLine("SC003 = 2	0	2	2	--	@	º	²	; 2");
+                    writer.WriteLine("SC004 = 3	0	3	3	--	#	ª	³	; 3");
+                    writer.WriteLine("SC005 = 4	0	4	4	--	$	¢	£	; 4");
+                    writer.WriteLine("SC006 = 5	0	5	5	--	%	€	¥	; 5");
+                    writer.WriteLine("SC007 = 6	4	6	6	--	^	ħ	Ħ	; 6");
+                    writer.WriteLine("SC008 = 7	4	7	7	--	&	ð	Ð	; 7");
+                    writer.WriteLine("SC009 = 8	4	8	8	--	*	þ	Þ	; 8");
+                    writer.WriteLine("SC00a = 9	0	9	9	--	(	‘	“	; 9");
+                    writer.WriteLine("SC00b = 0	0	0	0	--	)	’	”	; 0");
+                    writer.WriteLine("SC00c = OEM_MINUS	0	-	_	--	–	—	; -");
+                    writer.WriteLine("SC00d = OEM_PLUS	0	=	+	--	×	÷	; =");
+                    writer.WriteLine("CapsLock = OEM_1	0	={backspace}	*{CapsLock}	={backspace}	={backspace}	={backspace}	; Caps Lock");
+                    writer.WriteLine("SC039 = SPACE	0	={space}	={space}	--	={space}	 	; QWERTY Space");
+                    writer.WriteLine("SC01a = OEM_4	0	[	{	--	«	‹	; QWERTY [{{");
+                    writer.WriteLine("SC01b = OEM_6	0	]	}	--	»	›	; QWERTY ]}}");
+                    writer.WriteLine("SC028 = OEM_7	4	'	\"	--	õ	Õ	; QWERTY '\"");
+                    writer.WriteLine();
 
-                    // Iterowanie po przekazanym układzie klawiatury i generowanie odpowiednich linii
+                    // Indeksy przypisań
+                    int scanCode = 0x010;
+
+                    // Iterowanie przez przekazany układ klawiatury (keyboardLayout)
                     for (int row = 0; row < keyboardLayout.Length; row++)
                     {
                         for (int col = 0; col < keyboardLayout[row].Length; col++)
                         {
-                            string key = keyboardLayout[row][col];
+                            // Pomijamy SC02A (pierwszy klawisz w trzecim wierszu, pierwszy kolumna)
+                            if (row == 2 && col == 0)
+                                continue;
 
-                            // Generowanie przypisań
-                            writer.WriteLine($"SC{scanCode:X3} = {key.ToUpper()}	{key.ToLower()}	{key.ToUpper()}	--	{key.ToLower()}	{key.ToUpper()}	; {key}");
+                            string key = keyboardLayout[row][col];
+                            int finger = 5;  // Ustalamy "na sztywno" numer palca dla każdego klawisza (można to zmienić)
+
+                            // Generowanie przypisań w formacie: SC010 = Q	5	q	Q	--	q	Q	; Q
+                            writer.WriteLine($"SC{scanCode:X3} = {key.ToUpper()}	{finger}	{key.ToLower()}	{key.ToUpper()}	--	{key.ToLower()}	{key.ToUpper()}	; {key}");
                             scanCode++;  // Przechodzimy do kolejnego kodu skanera
                         }
                     }
@@ -365,9 +420,9 @@ namespace KeyboardApp
             // Definiujemy indeksy odpowiadające przyciskom w UI
             int[][] buttonIndexes = new int[][]
             {
-        new int[] { 28, 29, 30, 31, 32, 33, 34, 35, 36, 37 }, // Górny rząd
-        new int[] { 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 }, // Środkowy rząd
-        new int[] { 55, 56, 57, 58, 59, 60, 61, 62, 63, 64 }  // Dolny rząd
+                new int[] { 28, 29, 30, 31, 32, 33, 34, 35, 36, 37 },
+                new int[] { 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 },
+                new int[] { 55, 56, 57, 58, 59, 60, 61, 62, 63, 64 } 
             };
 
             if (bestLayout.Length != buttonIndexes.Length)
@@ -402,7 +457,7 @@ namespace KeyboardApp
                 }
             }
 
-            MessageBox.Show("Optimization process complete.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            //MessageBox.Show("Optimization process complete.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void LogLayout(string[][] layout, StringBuilder logContent)
@@ -434,19 +489,16 @@ namespace KeyboardApp
                 return;
             }
 
-            // Wykonanie analizy korpusu jednokrotnie
             EvaluationAlgorithm.ClearCache();
             string corpusContent = File.ReadAllText(corpusFilePath);
             EvaluationAlgorithm.PrecomputeCorpusAnalysis(corpusContent);
 
-            // Ocena układu klawiatury na podstawie wcześniej obliczonych wartości
             StringBuilder debugBigramInfo = new StringBuilder();
             double totalEffort = EvaluationAlgorithm.EvaluateKeyboardEffort(buttonContents, debugBigramInfo);
 
             aggregatedData.AppendLine();
             aggregatedData.AppendLine($"Total Effort (including bigram penalties if enabled): {totalEffort:F2}");
 
-            // Logowanie wyników
             string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KeyboardEvaluation.log");
             using (StreamWriter writer = new StreamWriter(logFilePath, false))
             {
@@ -475,6 +527,7 @@ namespace KeyboardApp
 
             int populationSize = SettingsWindow.PopulationSize;
             int generationCount = SettingsWindow.GenerationCount;
+            double[] generationEffort = new double[generationCount];
             double mutationRate = SettingsWindow.MutationRate;
             int numParentsSelected = SettingsWindow.NumParentsSelected;
             string selectedAlgorithm = SettingsWindow.SelectedAlgorithm;
@@ -485,6 +538,7 @@ namespace KeyboardApp
             bool buttonLock = SettingsWindow.IsButtonLockEnabled;
             EvaluationAlgorithm.ClearCache();
             string[][] LockedButtons = GetButtonMatrix();
+            
             //DisplayButtonMatrix(LockedButtons);
             
             if (!File.Exists(corpusFilePath))
@@ -508,7 +562,7 @@ namespace KeyboardApp
             foreach (var entry in EvaluationAlgorithm.publicCorpusFrequencyData.OrderByDescending(x => x.Value))
             {
                 double percentage = (entry.Value / totalCharacters) * 100;
-                logContent.AppendLine($"Character: '{entry.Key}'  |  Occurences: {entry.Value} | Percentage: {percentage}%");
+                logContent.AppendLine($"Character: '{entry.Key}'  |  Occurences: {entry.Value} | Percentage: {percentage:F2}%");
             }
 
             File.WriteAllText("CorpusAnalysis.log", logContent.ToString());
@@ -517,7 +571,7 @@ namespace KeyboardApp
 
             GenerationAlgorithms.GenerateInitialPopulation(populationSize);
             UpdateProgress("Generation 1: Population initialized");
-
+            
             for (int generation = 0; generation < generationCount; generation++)
             {
                 logContent.AppendLine($"\nGENERATION {generation + 1}");
@@ -545,8 +599,10 @@ namespace KeyboardApp
 
                 logContent.AppendLine("\nBest Layout of this Generation:");
                 LogLayout(populationEffort.First().layout, logContent);
+                
 
-                UpdateProgress($"Generation {generation + 1}   Best effort {populationEffort[0].effort}");
+                UpdateProgress($"Generation {generation + 1}   Best effort {populationEffort[0].effort:F4}");
+                generationEffort[generation] = populationEffort[0].effort;
                 List<string[][]> nextGeneration = new List<string[][]>();
                 if (elitismCount > 0)
                 {
@@ -588,11 +644,14 @@ namespace KeyboardApp
             File.WriteAllText("OptimizationLog.log", logContent.ToString());
 
             DisplayBestLayout(finalBestLayout);
+            string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "OptimizationLog.log");
+            var result = MessageBox.Show("Optimization process complete! View summary?", "Complete", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (result == MessageBoxResult.Yes)
+            {
+                var summaryWindow = new SummaryWindow(generationEffort, logFilePath);
+                summaryWindow.Show();
+            }
         }
-
-
-
-
         private void UpdateProgress(string status)
         {
             if (progressWindow != null)
@@ -600,8 +659,6 @@ namespace KeyboardApp
                 progressWindow.Dispatcher.Invoke(() => progressWindow.UpdateStatus(status));
             }
         }
-
-
         private void CloseProgressWindow()
         {
             if (progressWindow != null)

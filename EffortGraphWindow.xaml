@@ -1,0 +1,10 @@
+<Window x:Class="KeyboardApp.EffortGraphWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        Title="Effort Graph" Height="600" Width="800">
+	<Grid>
+		<!-- PlotView for rendering the graph -->
+		<oxy:PlotView Name="EffortPlotView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+	</Grid>
+</Window>
