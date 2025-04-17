@@ -36,11 +36,11 @@ namespace KeyboardApp
         private void ExportLayoutToPKL(object sender, RoutedEventArgs e)
         {
             int[][] ranges = new int[][]
-           {
-                new int[] { 28, 37 },
-                new int[] { 42, 51 },
-                new int[] { 55, 64 }
-           };
+             {
+        new int[] { 28, 37 },
+        new int[] { 42, 51 },
+        new int[] { 55, 64 }
+             };
             string[][] buttonMatrix = new string[ranges.Length][];
             for (int row = 0; row < ranges.Length; row++)
             {
@@ -56,7 +56,7 @@ namespace KeyboardApp
 
                     if (button != null)
                     {
-                        rowContents.Add(button.Content.ToString());
+                        rowContents.Add(button.Content.ToString().ToLower());
                     }
                     else
                     {
@@ -67,24 +67,58 @@ namespace KeyboardApp
             }
             GenerateLayoutFile(buttonMatrix);
         }
-        public void GenerateLayoutFile(string[][] keyboardLayout)
+
+        public void GenerateLayoutFile(string[][] kb)
         {
-            // Uruchomienie dialogu "Zapisz jako"
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
-                Filter = "INI Files (*.ini)|*.ini|All Files (*.*)|*.*",  // Ustawienie filtru dla plików .ini
-                DefaultExt = "ini"  // Domyślne rozszerzenie pliku
+                Filter = "INI Files (*.ini)|*.ini|All Files (*.*)|*.*",
+                DefaultExt = "ini"
             };
-
-            // Jeśli użytkownik wybrał plik
             if (saveFileDialog.ShowDialog() == true)
             {
+                string[] forbiddenSymbols = { ",", ".", "/", ";" };
                 string filePath = saveFileDialog.FileName;
-
-                // Tworzenie pliku
+                string[][] kb2 = new string[kb.Length][];
+                string[][] kbheader = new string[kb.Length][];
+                for (int i = 0; i < kb.Length; i++)
+                {
+                    kb2[i] = new string[10];
+                    kbheader[i] = new string[10];
+                }
+                for (int rows = 0; rows < 3; rows++)
+                {
+                    for (int cols = 0; cols < 10; cols++)
+                    {
+                        if (!Array.Exists(forbiddenSymbols, c => c == kb[rows][cols]))
+                        {
+                            kb2[rows][cols] = kb[rows][cols].ToString().ToUpper();
+                            kbheader[rows][cols] = kb[rows][cols].ToString().ToUpper();
+                        }
+                        else switch (kb[rows][cols])
+                            {
+                                case ",":
+                                    kb2[rows][cols] = "<";
+                                    kbheader[rows][cols] = "OEM_COMMA";
+                                    break;
+                                case ".":
+                                    kb2[rows][cols] = ">";
+                                    kbheader[rows][cols] = "OEM_PERIOD";
+                                    break;
+                                case "/":
+                                    kb2[rows][cols] = "?";
+                                    kbheader[rows][cols] = "OEM_2";
+                                    break;
+                                case ";":
+                                    kb2[rows][cols] = ":";
+                                    kbheader[rows][cols] = "OEM_1";
+                                    break;
+                            }
+                    }
+                }
                 using (StreamWriter writer = new StreamWriter(filePath))
                 {
-                    // Nagłówek
+                    //nagłówek
                     writer.WriteLine(";");
                     writer.WriteLine("; Keyboard Layout definition for");
                     writer.WriteLine("; Portable Keyboard Layout ");
@@ -115,21 +149,17 @@ namespace KeyboardApp
                     writer.WriteLine("row3 = 1123445567888");
                     writer.WriteLine("row4 = 11234455678");
                     writer.WriteLine();
-
-                    // Sekcja layout - generowanie przypisań klawiszy
                     writer.WriteLine("[layout]");
-
-                    // Sztywne przypisanie dla SC002 do SC00d
-                    writer.WriteLine("SC002 = 1	0	1	1	--	!	¡	¹	; 1");
-                    writer.WriteLine("SC003 = 2	0	2	2	--	@	º	²	; 2");
-                    writer.WriteLine("SC004 = 3	0	3	3	--	#	ª	³	; 3");
-                    writer.WriteLine("SC005 = 4	0	4	4	--	$	¢	£	; 4");
-                    writer.WriteLine("SC006 = 5	0	5	5	--	%	€	¥	; 5");
-                    writer.WriteLine("SC007 = 6	4	6	6	--	^	ħ	Ħ	; 6");
-                    writer.WriteLine("SC008 = 7	4	7	7	--	&	ð	Ð	; 7");
-                    writer.WriteLine("SC009 = 8	4	8	8	--	*	þ	Þ	; 8");
-                    writer.WriteLine("SC00a = 9	0	9	9	--	(	‘	“	; 9");
-                    writer.WriteLine("SC00b = 0	0	0	0	--	)	’	”	; 0");
+                    writer.WriteLine("SC002 = 1	0	1	!	--	!	¡	¹	; 1");
+                    writer.WriteLine("SC003 = 2	0	2	@	--	@	º	²	; 2");
+                    writer.WriteLine("SC004 = 3	0	3	#	--	#	ª	³	; 3");
+                    writer.WriteLine("SC005 = 4	0	4	$	--	$	¢	£	; 4");
+                    writer.WriteLine("SC006 = 5	0	5	%	--	%	€	¥	; 5");
+                    writer.WriteLine("SC007 = 6	4	6	^	--	^	ħ	Ħ	; 6");
+                    writer.WriteLine("SC008 = 7	4	7	&	--	&	ð	Ð	; 7");
+                    writer.WriteLine("SC009 = 8	4	8	*	--	*	þ	Þ	; 8");
+                    writer.WriteLine("SC00a = 9	0	9	(	--	(	‘	“	; 9");
+                    writer.WriteLine("SC00b = 0	0	0	)	--	)	’	”	; 0");
                     writer.WriteLine("SC00c = OEM_MINUS	0	-	_	--	–	—	; -");
                     writer.WriteLine("SC00d = OEM_PLUS	0	=	+	--	×	÷	; =");
                     writer.WriteLine("CapsLock = OEM_1	0	={backspace}	*{CapsLock}	={backspace}	={backspace}	={backspace}	; Caps Lock");
@@ -137,35 +167,26 @@ namespace KeyboardApp
                     writer.WriteLine("SC01a = OEM_4	0	[	{	--	«	‹	; QWERTY [{{");
                     writer.WriteLine("SC01b = OEM_6	0	]	}	--	»	›	; QWERTY ]}}");
                     writer.WriteLine("SC028 = OEM_7	4	'	\"	--	õ	Õ	; QWERTY '\"");
-                    writer.WriteLine();
-
-                    // Indeksy przypisań
-                    int scanCode = 0x010;
-
-                    // Iterowanie przez przekazany układ klawiatury (keyboardLayout)
-                    for (int row = 0; row < keyboardLayout.Length; row++)
+                    //writer.WriteLine($"SC{scanCode:X3} = {key.ToUpper()}	{finger}	{key.ToLower()}	{key.ToUpper()}	--	{key.ToLower()}	{key.ToUpper()}	; {key}");
+                    string[][] scancodes = new string[][] {
+                new string[] { "SC010", "SC011", "SC012", "SC013", "SC014", "SC015", "SC016", "SC017", "SC018", "SC019" },
+                new string[] { "SC01e", "SC01f", "SC020", "SC021", "SC022", "SC023", "SC024", "SC025", "SC026", "SC027" },
+                new string[] { "SC02d", "SC02c", "SC02e", "SC02f", "SC030", "SC031", "SC032", "SC033", "SC034", "SC035" }
+            };
+                    for (int rows = 0; rows < 3; rows++)
                     {
-                        for (int col = 0; col < keyboardLayout[row].Length; col++)
+                        for (int cols = 0; cols < 10; cols++)
                         {
-                            // Pomijamy SC02A (pierwszy klawisz w trzecim wierszu, pierwszy kolumna)
-                            if (row == 2 && col == 0)
-                                continue;
-
-                            string key = keyboardLayout[row][col];
-                            int finger = 5;  // Ustalamy "na sztywno" numer palca dla każdego klawisza (można to zmienić)
-
-                            // Generowanie przypisań w formacie: SC010 = Q	5	q	Q	--	q	Q	; Q
-                            writer.WriteLine($"SC{scanCode:X3} = {key.ToUpper()}	{finger}	{key.ToLower()}	{key.ToUpper()}	--	{key.ToLower()}	{key.ToUpper()}	; {key}");
-                            scanCode++;  // Przechodzimy do kolejnego kodu skanera
+                            writer.WriteLine($"{scancodes[rows][cols]} = {kbheader[rows][cols]}\t5\t{kb[rows][cols]}\t{kb2[rows][cols]}\t--\t{kb2[rows][cols]}");
                         }
                     }
 
-                    MessageBox.Show("Plik został zapisany do: " + filePath);
+                    MessageBox.Show("File saved to: " + filePath);
                 }
             }
             else
             {
-                MessageBox.Show("Nie wybrano pliku do zapisania.");
+                MessageBox.Show("No file selected.");
             }
         }
         private void ShowHelp(object sender, RoutedEventArgs e)
