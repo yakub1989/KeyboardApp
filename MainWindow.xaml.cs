@@ -37,9 +37,9 @@ namespace KeyboardApp
         {
             int[][] ranges = new int[][]
              {
-        new int[] { 28, 37 },
-        new int[] { 42, 51 },
-        new int[] { 55, 64 }
+                  new int[] { 28, 37 },
+                  new int[] { 42, 51 },
+                  new int[] { 55, 64 }
              };
             string[][] buttonMatrix = new string[ranges.Length][];
             for (int row = 0; row < ranges.Length; row++)
