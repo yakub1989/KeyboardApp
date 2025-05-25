@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -530,7 +531,8 @@ namespace KeyboardApp
                 writer.WriteLine(debugBigramInfo.ToString());
             }
 
-            MessageBox.Show($"Evaluation results saved to log file:\n{logFilePath}", "Evaluation Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+            //MessageBox.Show($"Evaluation results saved to log file:\n{logFilePath}", "Evaluation Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+            Process.Start(new ProcessStartInfo(logFilePath) { UseShellExecute = true });
         }
 
 
@@ -559,8 +561,6 @@ namespace KeyboardApp
             bool buttonLock = SettingsWindow.IsButtonLockEnabled;
             EvaluationAlgorithm.ClearCache();
             string[][] LockedButtons = GetButtonMatrix();
-            
-            //DisplayButtonMatrix(LockedButtons);
             
             if (!File.Exists(corpusFilePath))
             {
@@ -601,9 +601,7 @@ namespace KeyboardApp
                 {
                     for (int i = 0; i < GenerationAlgorithms.KeyboardPopulation.Count; i++)
                     {
-                        //DisplayButtonMatrix(GenerationAlgorithms.KeyboardPopulation[i]);
                         GenerationAlgorithms.KeyboardPopulation[i] = GenerationAlgorithms.AdjustLayoutToLockedKeys(GenerationAlgorithms.KeyboardPopulation[i], LockedButtons);
-                        //DisplayButtonMatrix(GenerationAlgorithms.KeyboardPopulation[i]);
                     }
                 }
                 var populationEffort = GenerationAlgorithms.KeyboardPopulation
